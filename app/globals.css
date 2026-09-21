@@ -1,77 +1,628 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap');
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ==================================================================
+   PARADIZE — design tokens
+
+   The register is taken from oxiinstruments.com, measured rather than
+   guessed. What that site actually does:
+
+     · the ground is very nearly pure black, #010101, and the ink is a
+       warm off-white, #f1f1f1. There is no third neutral doing real
+       work — separation comes from photography and from rules.
+     · ONE typeface carries every heading and every paragraph, always at
+       weight 400. Nothing is bold anywhere on the page. Size does the
+       shouting, and tracking tightens as size grows: roughly -0.09em on
+       the 500px display type, -0.06em at 70px, -0.04em at 35px.
+     · a monospace runs every piece of micro-type — captions, spec rows,
+       list numerals, nav — uppercase with positive tracking.
+     · the display type is set at about 21vw and is allowed to run past
+       the edges of the screen.
+     · photography is full-bleed, dark and top-lit, and it is the thing
+       the layout is built around.
+
+   Applied here with Work Sans (Work Sans Variable on OXI) and Fragment
+   Mono (the same face OXI uses).
+   ================================================================== */
+@theme {
+  /* --- Ground and ink -------------------------------------------- */
+  --color-bg: #010101;
+  --color-fg: #f1f1f1;
+
+  /* Two greys, both checked against #010101 for small text:
+     mute 6.1:1, dim 4.7:1. Anything fainter is decoration only. */
+  --color-mute: #8a8a8a;
+  --color-dim: #787878;
+
+  /* Rules, never fills. */
+  --color-line: #1c1c1e;
+  --color-line-2: #2f2f33;
+
+  /* The two lifted surfaces OXI uses for blocks and cards. */
+  --color-slab: #0c0c0f;
+  --color-slate: #253042;
+
+  /* Display type set behind or beneath photography. Decoration. */
+  --color-ghost: #17171a;
+
+  /* --- Signals ----------------------------------------------------
+     Spent only inside the requirement check, where they carry meaning:
+     a part is free, committed elsewhere, or not held at all. */
+  --color-ok: #6ee07a;
+  --color-warn: #ffb43d;
+  --color-gone: #ff6a52;
+
+  /* --- Type -------------------------------------------------------
+     Viewport-relative, the way the reference sets it, with a floor so
+     phones stay readable and a ceiling so 4K does not become absurd. */
+  --font-sans:
+    var(--font-work-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, sans-serif;
+  --font-mono:
+    var(--font-fragment-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --text-monument: clamp(3.5rem, 21vw, 21rem);
+  --text-monument--line-height: 0.76;
+  --text-monument--letter-spacing: -0.055em;
+
+  --text-display: clamp(2.5rem, 7vw, 6.5rem);
+  --text-display--line-height: 0.94;
+  --text-display--letter-spacing: -0.05em;
+
+  --text-statement: clamp(1.75rem, 4.4vw, 4.25rem);
+  --text-statement--line-height: 1.06;
+  --text-statement--letter-spacing: -0.042em;
+
+  --text-heading: clamp(1.5rem, 3.1vw, 3rem);
+  --text-heading--line-height: 1.06;
+  --text-heading--letter-spacing: -0.035em;
+
+  --text-sub: clamp(1.15rem, 1.7vw, 1.625rem);
+  --text-sub--line-height: 1.3;
+  --text-sub--letter-spacing: -0.025em;
+
+  --text-lead: clamp(1.0625rem, 1.35vw, 1.375rem);
+  --text-lead--line-height: 1.5;
+  --text-lead--letter-spacing: -0.015em;
+
+  --text-body: 1rem;
+  --text-body--line-height: 1.6;
+  --text-small: 0.875rem;
+  --text-small--line-height: 1.5;
+
+  --text-micro: 0.6875rem;
+  --text-micro--line-height: 1.4;
+  --text-micro--letter-spacing: 0.16em;
+
+  /* --- Geometry --------------------------------------------------- */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-xl: 8px;
+
+  --container-page: 96rem;
+  --container-reading: 36rem;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    font-weight: 400;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* Nothing on this page is bold. The reference sets every heading at
+     400 and lets scale carry the hierarchy; a 600 anywhere breaks it. */
+  h1,
+  h2,
+  h3,
+  h4,
+  strong,
+  b {
+    font-weight: 400;
+  }
+
+  [id] {
+    scroll-margin-top: 5rem;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-fg);
+    outline-offset: 3px;
+    border-radius: 1px;
+  }
+
+  ::selection {
+    background-color: var(--color-fg);
+    color: var(--color-bg);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------
+   Utilities
+   ------------------------------------------------------------------ */
+
+/** Every piece of micro-type on the page: mono, uppercase, tracked out. */
+@utility mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  line-height: var(--text-micro--line-height);
+  letter-spacing: var(--text-micro--letter-spacing);
+  text-transform: uppercase;
+  font-weight: 400;
+}
+
+/** Same face, left as typed: identifiers, versions, quantities. */
+@utility data {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8125rem;
+  letter-spacing: 0.01em;
+}
+
+@layer utilities {
+  /* Four corner marks, the way the reference marks out a card — it
+     reads as a faceplate fixed down at the corners rather than as a
+     rounded box. */
+  .screws {
+    position: relative;
+  }
+
+  .screws::before,
+  .screws::after,
+  .screws > .screw-b::before,
+  .screws > .screw-b::after {
+    content: "";
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.35;
+    pointer-events: none;
+  }
+
+  .screws::before {
+    top: 6px;
+    left: 6px;
+  }
+
+  .screws::after {
+    top: 6px;
+    right: 6px;
+  }
+
+  .screws > .screw-b::before {
+    bottom: 6px;
+    left: 6px;
+  }
+
+  .screws > .screw-b::after {
+    bottom: 6px;
+    right: 6px;
+  }
+
+  /* A rule-separated list: the divider is the design.
+     Drawn as pseudo-elements rather than borders so each one can be
+     scaled in from the left as its row arrives — a border cannot be
+     animated on its own, and on a page built almost entirely out of
+     hairlines the rules are the natural thing to put in motion. */
+  .ruled > * {
+    position: relative;
+  }
+
+  .ruled > *::before {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    height: 1px;
+    background: var(--color-line);
+    transform-origin: left;
+  }
+
+  .ruled > *:last-child::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    height: 1px;
+    background: var(--color-line);
+  }
+
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The measuring edge. A base rule with graduations hanging off it —
+     minor every 11px, major every 66px — drawn as gradients so a
+     full-width ruler costs two pseudo-elements and no markup. */
+  .ruler {
+    position: relative;
+    display: block;
+    height: 11px;
+  }
+
+  .ruler::before {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    height: 1px;
+    background: var(--color-line-2);
+    transform-origin: left;
+  }
+
+  .ruler::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    height: 100%;
+    transform-origin: left;
+    background-image:
+      repeating-linear-gradient(
+        to right,
+        var(--color-line-2) 0 1px,
+        transparent 1px 66px
+      ),
+      repeating-linear-gradient(
+        to right,
+        var(--color-line) 0 1px,
+        transparent 1px 11px
+      );
+    background-size:
+      100% 11px,
+      100% 5px;
+    background-repeat: no-repeat;
+  }
+
+  /* Word masking geometry. The clip is padded and pulled back by the
+     same amount, or `overflow: hidden` cuts the tails off g, y and p. */
+  .words .word {
+    display: inline-block;
+    overflow: hidden;
+    padding-bottom: 0.18em;
+    margin-bottom: -0.18em;
+    vertical-align: bottom;
+  }
+
+  .words .word-i {
+    display: inline-block;
+  }
+
+  /* Photography sits under type often enough that the scrim is a
+     component of its own rather than a one-off gradient. */
+  .scrim-b::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      to top,
+      rgb(1 1 1 / 0.92) 0%,
+      rgb(1 1 1 / 0.55) 35%,
+      rgb(1 1 1 / 0.1) 70%,
+      transparent 100%
+    );
+  }
+
+  /* A full-bleed photograph always has copy on top of it, so the scrim
+     has to be heavy enough for body text, not just for a headline. */
+  .scrim-full::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: rgb(1 1 1 / 0.82);
+  }
+
+  /* ----------------------------------------------------------------
+     Scroll-driven motion, in CSS.
+
+     Both of these run on the compositor off a view timeline. They are
+     gated twice: once on support, because Firefox has not shipped it,
+     and once on the motion preference. When either gate closes, the
+     element keeps its ordinary static styles — content is never left
+     hidden waiting for an animation that will not run.
+     ---------------------------------------------------------------- */
+  @supports (animation-timeline: view()) {
+    @media (prefers-reduced-motion: no-preference) {
+      .reveal {
+        animation: reveal-rise linear both;
+        animation-timeline: view();
+        animation-range: entry 4% cover 26%;
+      }
+
+      /* The photograph drifts against its frame as the frame passes.
+         The scale is what buys the room to drift in without exposing
+         an edge. */
+      .parallax {
+        animation: parallax-drift linear both;
+        animation-timeline: view();
+        animation-range: cover;
+        will-change: transform;
+      }
+
+      /* Words rising out from behind a mask, staggered.
+         The heading owns a named timeline so every word inside can hang
+         off the same one and simply start at a different point on it —
+         `animation-delay` means nothing on a scroll timeline, so the
+         stagger has to live in animation-range instead. */
+      .words {
+        view-timeline-name: --words;
+      }
+
+      .words .word-i {
+        animation: word-rise linear both;
+        animation-timeline: --words;
+        animation-range: entry calc(6% + var(--i) * 2.2%) entry
+          calc(58% + var(--i) * 2.2%);
+      }
+
+      /* Each row's rule draws itself in from the left as the row
+         arrives. The page is built out of hairlines, so putting them in
+         motion is native to it rather than decoration laid on top. */
+      .ruled > *::before {
+        animation: rule-draw linear both;
+        animation-timeline: view();
+        animation-range: entry 8% entry 85%;
+      }
+
+      /* As the title screen leaves, the name drifts up and back while
+         the photograph pushes forward. Two rates, so the hero has depth
+         on the way out instead of just sliding away. */
+      .monument-exit {
+        animation: monument-leave linear both;
+        animation-timeline: view();
+        animation-range: exit 0% exit 100%;
+      }
+
+      .hero-photo {
+        animation: hero-push linear both;
+        animation-timeline: view();
+        animation-range: exit 0% exit 100%;
+      }
+
+      /* The measuring edge draws itself across as you reach it. The
+         graduations run slightly behind the base rule so the ticks
+         appear to be scored onto a line that is already there. */
+      .ruler::before {
+        animation: rule-draw linear both;
+        animation-timeline: view();
+        animation-range: entry 15% entry 90%;
+      }
+
+      .ruler::after {
+        animation: rule-draw linear both;
+        animation-timeline: view();
+        animation-range: entry 30% cover 8%;
+      }
+
+      /* The footer's signature rises as the document ends. */
+      .sign-rise {
+        animation: sign-rise linear both;
+        animation-timeline: view();
+        animation-range: entry 0% cover 40%;
+      }
+
+      /* How far through the document you are. `scroll(root)` rather than
+         `view()` — this one tracks the page, not an element passing
+         through it. */
+      .progress-bar {
+        animation: progress-fill linear both;
+        animation-timeline: scroll(root block);
+      }
+    }
+  }
+
+  /* One treatment for every photograph on the page.
+     Stock images arrive at wildly different exposures — a warm, bright
+     workbench next to a near-black board macro reads as two different
+     websites. Pulling brightness and saturation down puts them all in
+     the same room. */
+  .photo {
+    filter: brightness(0.62) saturate(0.75) contrast(1.05);
+  }
+
+  /* The title screen gets its own exposure.
+
+     The section stills are stock photographs shot at wildly different
+     brightnesses and need pulling down hard to agree with each other.
+     The hero is one clip that is already dark at source: its frames
+     average 37/255 against roughly 74 for the stills, so the same
+     −38% left it at 12/255, which is black. Measured back against the
+     hero's previous exposure of 32/255 through a real canvas
+     composite, this lands on 32.1 with no clipped pixels. Saturation
+     and contrast are untouched, so it still reads as one of the set. */
+  .photo-hero {
+    filter: brightness(1.02) saturate(0.75) contrast(1.05);
+  }
+}
+
+@keyframes reveal-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes parallax-drift {
+  from {
+    transform: translateY(-7%) scale(1.16);
+  }
+  to {
+    transform: translateY(7%) scale(1.16);
+  }
+}
+
+@keyframes word-rise {
+  from {
+    transform: translateY(110%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes rule-draw {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes monument-leave {
+  from {
+    transform: none;
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-14%) scale(0.93);
+    opacity: 0.22;
+  }
+}
+
+@keyframes hero-push {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.12);
+  }
+}
+
+/* Switching release is the page's one real interactive moment and it
+   used to happen with no transition at all. Base UI renders only the
+   selected panel, so a plain entry animation replays on every switch. */
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes sign-rise {
+  from {
+    transform: translateY(22%);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* The progress hairline under the header, driven by the document's own
+   scroll rather than by any element's position. */
+@keyframes progress-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* ------------------------------------------------------------------
+   shadcn semantic tokens, mapped onto the palette above so registry
+   components inherit the register instead of fighting it.
+   ------------------------------------------------------------------ */
+@theme inline {
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+}
 
 :root {
-  --background: #000000;
-  --foreground: #ffffff;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: 'Manrope', var(--font-geist-sans), sans-serif;
-  --font-mono: var(--font-geist-mono);
-}
-
-html {
-  background: #000000;
-  overscroll-behavior: none;
-}
-
-body {
-  background: #000000;
-  color: var(--foreground);
-  overscroll-behavior: none;
-}
-
-@keyframes paradize-entrance {
-  0% {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-paradize-entrance {
-  animation: paradize-entrance 1s ease-out forwards;
-}
-
-.text-glow {
-  text-shadow: 0 0 8px rgba(255, 255, 255, 0.8), 0 0 15px rgba(255, 255, 255, 0.6);
-}
-
-@keyframes slide-in {
-  0% {
-    transform: translateX(-20px);
-    opacity: 0;
-  }
-  100% {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-.animate-slide-in {
-  animation: slide-in 1s ease-out forwards;
-  animation-delay: 0.7s; /* Adjusted delay */
-  opacity: 0; /* Start hidden */
-}
-
-@keyframes line-grow {
-  0% {
-    height: 0;
-    opacity: 0;
-  }
-  100% {
-    height: 96px; /* Changed from 100% to 96px */
-    opacity: 1;
-  }
-}
-
-.animate-line-grow {
-  animation: line-grow 0.5s ease-out forwards;
-  animation-delay: 0.5s; /* Play after text-grow, before slide-in */
+  --background: #010101;
+  --foreground: #f1f1f1;
+  --card: #0c0c0f;
+  --card-foreground: #f1f1f1;
+  --popover: #0c0c0f;
+  --popover-foreground: #f1f1f1;
+  /* The primary control is the off-white one, as on the reference: a
+     white block on black, not a coloured button. */
+  --primary: #f1f1f1;
+  --primary-foreground: #010101;
+  --secondary: #17171a;
+  --secondary-foreground: #f1f1f1;
+  --muted: #101013;
+  --muted-foreground: #8a8a8a;
+  --accent: #253042;
+  --accent-foreground: #f1f1f1;
+  --destructive: #ff6a52;
+  --border: #1c1c1e;
+  --input: #2f2f33;
+  --ring: #8a8a8a;
+  --chart-1: #6ee07a;
+  --chart-2: #ffb43d;
+  --chart-3: #ff6a52;
+  --chart-4: #8a8a8a;
+  --chart-5: #253042;
+  --radius: 4px;
+  --sidebar: #0c0c0f;
+  --sidebar-foreground: #f1f1f1;
+  --sidebar-primary: #f1f1f1;
+  --sidebar-primary-foreground: #010101;
+  --sidebar-accent: #17171a;
+  --sidebar-accent-foreground: #f1f1f1;
+  --sidebar-border: #1c1c1e;
+  --sidebar-ring: #8a8a8a;
 }
