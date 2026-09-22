@@ -341,3 +341,133 @@ page itself:
 
 Each page ends with the waitlist, so the floating CTA has somewhere to point
 and the form is never more than one screen away.
+
+### Marketplace and research
+
+Both were sections lifted onto pages of their own, and at first that showed:
+each had one content heading and roughly 250 words before the waitlist, with
+none of the ruler system that organises the landing page. They read as
+offcuts.
+
+They now carry the same divider system, labelled rather than numbered — the
+page header holds the site-level number and two numbering scales on one page
+would only compete.
+
+**Marketplace** gained two blocks, both grounded rather than written to fill
+space:
+
+- _Four ways a line can go_ renders the actual branches of
+  `checkRequirements()`. Labels and descriptions come straight out of
+  `statusCopy`, so the explanation cannot drift from the table on the landing
+  page that uses the same states. A kit is whatever comes back `missing`.
+- _What this is not, yet_ takes the small "no store connected" badge and
+  gives it full size. Every line is a statement of absence, so none of it can
+  age into a false claim — when one becomes untrue it gets deleted, not
+  rewritten.
+
+**Research** is now one line and a status. It carried more — an empty-state
+readout, a set of boundary statements, its own waitlist — and all of it was
+true, but it was several screens of copy in front of a stream that has
+published nothing. A page that says one honest thing is a better answer to
+having nothing to show than four sections explaining the nothing. Anyone who
+wants telling can still use the `Research` box on the waitlist, which is
+reachable from the standing card and from the other two pages.
+
+Behind it is an observation cupola — seven panes on the ISS module's
+arrangement, set into a bulkhead, with a warp field running past outside. It
+is drawn: one even-odd path with seven holes in it laid over the view, so the
+holes are the only places the view survives, with the structure's metal taken
+from a photograph and a lighting ramp multiplied over it.
+
+The thing that took longest to get right was not the drawing. The scene sits
+under the same grade every photograph here obeys, near enough — the site is
+one off-white ink on `#010101` and nothing shouts, and a scene rendered at
+full chroma cannot sit in that however convincing it is alone. It reads as a
+different website pasted in. Graded down, with the trails off-white and the
+three colour fields reduced to greys turned a few degrees warm, neutral and
+cool, it becomes part of the same document.
+
+`statusTone` moved to `lib/status-tone.ts` so the marketplace explanation and
+the platform table cannot drift apart.
+
+### The marketplace preview
+
+`components/sections/clone-demo/` plays the flow back like a screen
+recording: a profile, a project, clone it, check the parts against your own
+shelf, search for the one line you lack, add it to a cart. A pointer drives
+it and a camera follows.
+
+It is split four ways, because at 859 lines in one file the interesting parts
+were unreadable:
+
+- `lib/data/demo-flow.ts` — the beats. Pure data: what is on screen, how long
+  it holds, what the camera frames. The thing most likely to be edited, and
+  editing it should not mean opening a file full of JSX.
+- `clone-demo/camera.ts` — the coordinate arithmetic. `offsetWithin` walks
+  `offsetParent` rather than using `getBoundingClientRect`, because the
+  content is being scaled and a client rect would report post-transform
+  coordinates and send the camera chasing its own tail.
+- `clone-demo/screens.tsx` — the three screens, each handed only the marks it
+  owns.
+- `clone-demo/index.tsx` — the player: clock, transport, window.
+
+Two things are deliberately missing from the listings. No prices and no
+sellers, because nothing is connected and any figure in those columns would
+be invented. And the titles describe a class of part rather than naming the
+product in the photograph — the photographs are real components under a stock
+licence, and captioning a real manufacturer's board as something Paradize
+lists would imply a supplier relationship that does not exist.
+
+One layout bug worth recording: `.ruled`'s closing rule hangs off
+`:last-child`, which in a two-column grid is only the bottom-right cell, so
+the rule stopped half way across. `.ruled-grid` moves it to the container.
+
+### The preview
+
+`components/sections/clone-demo.tsx` plays the flow rather than describing
+it: a pointer clones a release, the check resolves against what you hold, and
+the one line you are short of goes into a kit. Five phases on a loop.
+
+It is labelled a preview on its face, because none of that interface exists.
+It is called a **kit**, not a cart — that is the product's own word, and there
+is no store, pricing or checkout for a cart to sit in front of.
+
+Rows and states come from the same fixture as everything else, so the preview
+cannot show a result the real check would not.
+
+The camera is the other half of it. Each phase names a target and a
+distance, and the content layer is translated and scaled so that target
+lands in the middle of the frame: wide at rest, 1.55x into the Clone
+button, back to 1.12x across the list while the states resolve, 1.6x into
+the Add control, then all the way back out so the finished state is seen
+whole. The pointer rides inside that layer, so it scales with the zoom the
+way a cursor does in a real recording.
+
+Four things it gets right that are easy to get wrong:
+
+- **The parts list is present from the first frame**, and only the _status_
+  resolves. Hiding the rows left the window holding a large void for two
+  phases, and implied the list arrives from somewhere rather than being part
+  of the release.
+- **The transport sits above the window.** Below it, the floating waitlist
+  card covers the pause control on a phone — and for looping content a pause
+  control is a WCAG 2.2.2 requirement, not decoration.
+- **The action slot is reserved on every row**, not only the one that fills
+  it, or the missing row's badge sits left of the others.
+
+The window is `aria-hidden` with a text equivalent beside it, since a screen
+reader cannot follow a moving pointer. Under `prefers-reduced-motion` it does
+not animate at all — it renders the finished state and stays there.
+
+Two more, specific to the camera:
+
+- **Positions are read from `offsetParent`, not `getBoundingClientRect`.**
+  The layer being measured is the same layer being scaled, so rects would
+  report post-transform coordinates and the camera would chase its own tail.
+- **A target that spans the window is framed from its left edge**, not its
+  centre. Centring a full-width row crops both sides evenly, which eats the
+  part numbers — and rows read from the left.
+
+The push-in eases off below 560px. A 1.6× crop of a 390px frame leaves almost
+nothing either side of the control, which stops reading as a camera move and
+starts reading as a broken layout.
