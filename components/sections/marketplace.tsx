@@ -111,9 +111,11 @@ export function Marketplace() {
                 >
                   Preview · no store connected
                 </Badge>
+                {/* Kept short: the scope section below spells out what
+                    is missing. This only has to stop someone reading
+                    the card itself as a shop. */}
                 <p className="text-small text-mute mt-3">
-                  No pricing, seller or checkout behind this yet. It shows the
-                  shape of a kit.
+                  It shows the shape of a kit.
                 </p>
               </div>
             </div>

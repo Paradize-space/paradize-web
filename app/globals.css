@@ -253,6 +253,18 @@
     background: var(--color-line);
   }
 
+  /* Two-column variant. The closing rule cannot hang off :last-child
+     there — that is only the bottom-RIGHT cell, so the rule stops half
+     way across and the block looks unfinished. The container carries
+     it instead, which is correct at one column and at two. */
+  .ruled-grid > *:last-child::after {
+    content: none;
+  }
+
+  .ruled-grid {
+    border-bottom: 1px solid var(--color-line);
+  }
+
   .tnum {
     font-variant-numeric: tabular-nums;
   }
@@ -461,6 +473,545 @@
   .photo-hero {
     filter: brightness(1.02) saturate(0.75) contrast(1.05);
   }
+
+  /* Part thumbnails in the marketplace preview. The section stills are
+     pulled down because they sit behind or beside type; these are
+     40-64px squares that have to be legible AS the part, and at −38%
+     they go to mud. Dimmed enough to sit in the dark panel, no
+     further. */
+  .photo-part {
+    filter: brightness(0.86) saturate(0.82) contrast(1.02);
+  }
+
+  /* ----------------------------------------------------------------
+     The deep sky. Research page only.
+
+     One field behind the whole page rather than three bands in it.
+     It is fixed, so the page falls through it, and its colour is
+     driven by scroll position: crimson at the top, the gas giant
+     through the middle, the aurora at the foot. The three are stacked
+     and cross-faded, so there is no seam anywhere — you cannot point
+     at where one ends.
+
+     The cross-fade is NOT gated on prefers-reduced-motion. Nothing
+     moves: it is a colour responding to the reader's own scrolling,
+     the same class of thing as the progress bar. The star drift and
+     the motes are motion, and those are gated.
+     ---------------------------------------------------------------- */
+  .deep-sky {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    /* Clipped to the structure's outer edge. Square, its blurred
+       trails leave a faintly lighter rectangle against the black —
+       the frame path covers it, but only to within a hairline, and
+       that hairline is visible. Nothing paints outside the disc now. */
+    clip-path: circle(47.8% at 50% 50%);
+    pointer-events: none;
+    /* Isolated, so the screen blending inside composites against the
+       sky's own black and not against whatever the page paints. */
+    isolation: isolate;
+    background-color: var(--color-bg);
+    /* Chroma is the one lever that costs nothing here: saturate()
+       uses a luma-preserving matrix, so the field gets its colour
+       back without moving the luminance the contrast figures above
+       are built on. */
+    filter: saturate(0.95);
+  }
+
+  .hue {
+    position: absolute;
+    inset: 0;
+  }
+
+  /* The three fields cross-fade on a slow clock rather than on
+     scroll position.
+
+     It was on a scroll timeline, which was right when the page was
+     long. It is one screen now, so there is no scroll left to drive
+     anything — the reader would have seen the crimson field and never
+     the other two. A 96s cycle is slow enough that nothing on screen
+     appears to be doing something; the sky is just not the same
+     colour when you look back at it.
+
+     The particles do NOT ride this. They keep one tint throughout,
+     which is also how it works: in a real field the light changes and
+     the dust does not. */
+  .hue-gas,
+  .hue-aurora {
+    opacity: 0;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .hue-astro,
+    .hue-gas,
+    .hue-aurora {
+      animation-duration: 96s;
+      animation-timing-function: linear;
+      animation-iteration-count: infinite;
+    }
+
+    .hue-astro {
+      animation-name: sky-astro;
+    }
+    .hue-gas {
+      animation-name: sky-gas;
+    }
+    .hue-aurora {
+      animation-name: sky-aurora;
+    }
+  }
+
+  /* ----------------------------------------------------------------
+     The warp field.
+
+     Light trails, all running one diagonal, sliding along their own
+     axis. The round out-of-focus spheres that used to be here are
+     gone: the reference is a frame shot at speed, where every point
+     source is smeared into a streak and nothing in it is a circle.
+
+     Every trail is horizontal in its own coordinate space and the
+     whole container is rotated once. That way the animation is a
+     single-axis translate — which stays on the compositor — instead
+     of 80 elements each doing their own rotated maths.
+
+     The container is half again larger than the layer in each
+     direction, because rotating a box exposes its corners and there
+     has to be field out there to expose.
+     ---------------------------------------------------------------- */
+  .warp {
+    position: absolute;
+    inset: -55%;
+    transform: rotate(-22deg);
+  }
+
+  .warp-trail {
+    position: absolute;
+    left: -20%;
+    /* Tapered at both ends. A trail with hard ends reads as a bar. */
+    background-image: linear-gradient(
+      to right,
+      transparent 0%,
+      currentColor 22%,
+      currentColor 78%,
+      transparent 100%
+    );
+    /* Additive, so crossing trails brighten rather than occlude. */
+    mix-blend-mode: screen;
+  }
+
+  /* One filter for the whole group rather than one per trail: a blur
+     on each of 26 elements is 26 separate filter passes. */
+  .warp-bloom {
+    filter: blur(7px);
+  }
+
+  .warp-spark {
+    filter: blur(0.6px);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .warp-trail {
+      animation-name: warp-run;
+      animation-timing-function: linear;
+      animation-iteration-count: infinite;
+    }
+  }
+
+  /* ----------------------------------------------------------------
+     The observation cupola.
+
+     Seven panes — one round at the centre, six trapezoids around it —
+     in a heavy structure, on black. The geometry is generated in
+     components/chrome/deep-sky.tsx; all that lives here is where the
+     thing sits and how big it is.
+
+     There is no mask and no clip-path. The structure is a single
+     even-odd path with seven holes in it, laid over the view, so the
+     holes are the only places the view survives.
+
+     What moves matters as much as what is drawn: the view shakes and
+     the structure does not. A window does not drift against the eye
+     looking through it, and that split is most of the effect.
+     ---------------------------------------------------------------- */
+  /* The whole scene sits under the same grade every photograph on
+     this site obeys.
+
+     This is what was actually wrong with it, and it was never
+     realism. The site is one off-white ink on #010101, hairlines and
+     mono labels, and its imagery is pulled to brightness 0.62 /
+     saturate 0.75 so that nothing shouts. A scene rendered at full
+     chroma cannot sit in that however convincing it is on its own —
+     it reads as a different website pasted in. Graded down, it
+     becomes part of the same document. */
+  .port {
+    position: fixed;
+    inset: 0;
+    z-index: -10;
+    overflow: hidden;
+    background-color: #010101;
+    /* The sources are near-neutral now, so the grade no longer has
+       to strip chroma out of them — at 0.42 it flattened the last
+       few degrees of warm-to-cool that make the loop readable. It
+       only holds the brightness down. */
+    filter: brightness(0.72) saturate(0.9) contrast(1.06);
+  }
+
+  /* Light thrown out of the panes onto the structure, and halation
+     where the two meet. Blurred hard and screened over the finished
+     frame, clipped to the module's outer edge. The children carry
+     `.hue` class names, so they pick up the colour loop's keyframes
+     and stay in step with the view without a second animation. */
+  .cupola-spill {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    /* Clipped to the metal, not to the disc. Spilling over the panes
+       as well lifts them uniformly and flattens whatever is inside
+       them — the opposite of what reflected light does, and it was
+       the reason the view had gone to a flat red wash. */
+    clip-path: url(#cup-metal);
+    filter: blur(46px);
+    mix-blend-mode: screen;
+    /* Restrained. At 0.4 the structure stopped being metal and
+       became a red object — light picked up off a nearby surface is
+       a sheen on something dark, not a repaint of it. Now that it
+       only falls on metal it can afford a little more. */
+    opacity: 0.3;
+  }
+
+  /* The compartment in front. Softened a touch: it is nearer the
+     viewer than the window is, and a lens focused on the view would
+     not hold it sharp. */
+  .port-fore {
+    filter: blur(1.1px);
+  }
+
+  /* Film grain. Kept very low: it unifies layers drawn by different
+     means, but there is no grain anywhere else on this site, and at
+     any strength it announces itself as a treatment. */
+  .grain {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.07;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='180' height='180' filter='url(%23n)'/></svg>");
+    background-size: 180px 180px;
+  }
+
+  /* Square, always: the panes are laid out on a circle, and in a
+     non-square box a circle is an ellipse. */
+  /* The compartment wall. The same steel as the module, tiled coarse
+     and taken right down, so the window is a hole in something made
+     of the same stuff rather than a disc hung in a void. */
+  .hull-wall {
+    position: absolute;
+    inset: 0;
+    background-image: url("/spacecraft/hull.jpg");
+    background-size: 760px;
+    background-repeat: repeat;
+    /* Hard down. The wall is unlit — the only light in the
+       compartment comes out of the window. */
+    filter: brightness(0.15) contrast(1.2) saturate(0.4);
+  }
+
+  /* Plate seams over the wall, which also break up the tiling: a
+     photograph repeated at 760px shows its own edges, and a grid of
+     panel lines is exactly what hides them. */
+  .hull-seams {
+    position: absolute;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(
+        90deg,
+        rgb(255 255 255 / 0.035) 0 1px,
+        transparent 1px 380px
+      ),
+      repeating-linear-gradient(
+        0deg,
+        rgb(255 255 255 / 0.028) 0 1px,
+        transparent 1px 304px
+      ),
+      radial-gradient(
+        90% 80% at 68% 50%,
+        transparent 30%,
+        rgb(1 1 1 / 0.55) 78%,
+        rgb(1 1 1 / 0.85) 100%
+      );
+  }
+
+  /* Light thrown out of the window onto the wall around it. Much
+     wider and fainter than the spill on the module's own metal. */
+  .wall-spill {
+    position: absolute;
+    top: 33%;
+    left: 50%;
+    width: min(88vw, 46vh);
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%) scale(1.75);
+    pointer-events: none;
+    filter: blur(80px);
+    mix-blend-mode: screen;
+    /* Faint. At 0.22 with a wider spread it reached the type on the
+       far side of the page and lit the whole wall evenly, which is
+       not what a light source in one place does. */
+    opacity: 0.16;
+  }
+
+  /* The module sits proud of the wall, so it casts one. */
+  .wall-recess {
+    position: absolute;
+    top: 33%;
+    left: 50%;
+    width: min(88vw, 46vh);
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%) scale(1.2);
+    pointer-events: none;
+    border-radius: 50%;
+    box-shadow: 0 26px 70px 10px rgb(0 0 0 / 0.75);
+  }
+
+  @media (min-width: 1024px) {
+    .wall-spill,
+    .wall-recess {
+      top: 50%;
+      left: 72%;
+      width: min(58vw, 90vh);
+    }
+  }
+
+  /* The module is not square-on to the viewer.
+
+     This is the other half of it, alongside the compartment in front.
+     An orthographic disc dead-centre in frame is a badge; the same
+     disc seen slightly from above and off-axis, big enough to crop
+     against the edge of the screen, is a place. The references are
+     all wide-angle and all off-axis — none of them is a neat
+     elevation of a window.
+     ---------------------------------------------------------------- */
+  .cupola-rig {
+    position: absolute;
+    inset: 0;
+    /* Centred origin, and a small angle. Off-axis origins throw the
+       module across the frame — a far perspective-origin projects a
+       distant element a very long way, which emptied the middle of
+       the page and put the window in a corner. */
+    perspective: 2200px;
+    perspective-origin: 50% 50%;
+  }
+
+  /* Narrow: the cupola sits high and the type goes underneath it.
+     Centred on both, the heading lands straight across the middle of
+     the structure, which is the one thing on the page worth looking
+     at. */
+  .cupola {
+    position: absolute;
+    top: 33%;
+    left: 50%;
+    width: min(88vw, 46vh);
+    aspect-ratio: 1;
+    /* The centring is folded into `transform` rather than left on the
+       `translate` property: something in the base layers resets
+       `translate`, and the module ended up anchored by its top-left
+       corner and half off the screen. One property, explicit order. */
+    transform: translate(-50%, -50%) rotateX(5deg) rotateZ(-3deg);
+  }
+
+  /* Wide: side by side instead, the type taking the space the cupola
+     leaves. */
+  @media (min-width: 1024px) {
+    .cupola {
+      top: 50%;
+      left: 72%;
+      width: min(58vw, 90vh);
+      /* Just enough to be off-square. More than this and the module
+         stops being the subject of the frame. */
+      transform: translate(-50%, -50%) rotateX(6deg) rotateZ(-3deg);
+    }
+  }
+
+  .port-view {
+    position: absolute;
+    inset: 0;
+  }
+
+  /* Two layers at co-prime periods, one translating and one rotating,
+     so the loop is long enough that no rhythm is audible in it. A
+     single keyframe on a single element always ticks. */
+  @media (prefers-reduced-motion: no-preference) {
+    .port-view {
+      animation: port-drift-a 7.3s ease-in-out infinite;
+    }
+
+    .port-view > * {
+      animation: port-drift-b 11.9s ease-in-out infinite;
+    }
+  }
+
+  /* Oversized, so the shake and the rotation never pull an edge into
+     frame. Set here too, not only in the keyframes, so the still
+     frame under reduced motion is framed the same way. */
+  .port-view > * {
+    position: absolute;
+    inset: 0;
+    transform: scale(1.05);
+  }
+
+  /* Reflections in the pane. They run across the warp's diagonal
+     rather than along it — a reflection belongs to the glass, not to
+     what is behind it, so it must not look like part of the field.
+     Inside the aperture, and outside the shake. */
+  .glass-sheen {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    mix-blend-mode: screen;
+    background:
+      linear-gradient(
+        112deg,
+        transparent 16%,
+        rgb(255 255 255 / 0.045) 25%,
+        transparent 33%
+      ),
+      linear-gradient(
+        112deg,
+        transparent 50%,
+        rgb(255 255 255 / 0.024) 56%,
+        transparent 62%
+      ),
+      linear-gradient(
+        112deg,
+        transparent 73%,
+        rgb(255 255 255 / 0.032) 79%,
+        transparent 86%
+      );
+  }
+
+  /* Barely there. On a wide screen the type is off the glass
+     entirely — it sits on the black beside the cupola — so the view
+     has almost no contrast duty and is allowed to be as bright as
+     the reference. Where the two do overlap, on a narrow screen,
+     `.text-well` does the work locally. */
+  .sky-scrim {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    /* Very light. The text wells carry the contrast duty; this only
+       stops the brightest trails blowing out. */
+    background: rgb(1 1 1 / 0.08);
+  }
+
+  /* A soft well of darkness under a block of type.
+
+     A flat scrim strong enough to survive a white trail passing
+     behind eleven-pixel mono would have to be around 0.75, and at
+     that figure the field is mud. This puts the darkness only where
+     the words are and lets it fall off to nothing, so the sky keeps
+     its colour everywhere else. Worst case — a full-strength white
+     trail directly behind the text — the composite lands near rgb(40
+     40 40), where the lifted greys below hold 6.1:1 for mute and
+     4.7:1 for dim. */
+  .text-well {
+    position: relative;
+    isolation: isolate;
+  }
+
+  /* The box is far larger than the type it covers, and the gradient
+     reaches zero well inside it. Sized the other way round — the
+     falloff still carrying alpha when it meets the edge — the box
+     clips it and what should be a pool of shadow becomes a visible
+     rectangle. */
+  .text-well::before {
+    content: "";
+    position: absolute;
+    inset: -90% -30%;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(
+      40% 36% at 34% 50%,
+      rgb(1 1 1 / 0.8) 0%,
+      rgb(1 1 1 / 0.66) 48%,
+      rgb(1 1 1 / 0) 100%
+    );
+  }
+
+  /* The foot of the page carries real body copy at small sizes, so it
+     gets the same well as a band rather than a pool. */
+  .footer-well {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .footer-well::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: linear-gradient(
+      to bottom,
+      rgb(1 1 1 / 0) 0%,
+      rgb(1 1 1 / 0.72) 14%,
+      rgb(1 1 1 / 0.82) 100%
+    );
+  }
+
+  /* A soft well of darkness under a block of type.
+
+     A flat scrim strong enough to survive a white trail passing
+     behind eleven-pixel mono would have to be around 0.75, and at
+     that figure the field is mud. This puts the darkness only where
+     the words are and lets it fall off to nothing, so the sky keeps
+     its colour everywhere else. Worst case — a full-strength white
+     trail directly behind the text — the composite lands near rgb(40
+     40 40), where the lifted greys below hold 6.1:1 for mute and
+     4.7:1 for dim. */
+  .text-well {
+    position: relative;
+    isolation: isolate;
+  }
+
+  /* The box is far larger than the type it covers, and the gradient
+     reaches zero well inside it. Sized the other way round — the
+     falloff still carrying alpha when it meets the edge — the box
+     clips it and what should be a pool of shadow becomes a visible
+     rectangle. */
+  .text-well::before {
+    content: "";
+    position: absolute;
+    inset: -90% -30%;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(
+      40% 36% at 34% 50%,
+      rgb(1 1 1 / 0.8) 0%,
+      rgb(1 1 1 / 0.66) 48%,
+      rgb(1 1 1 / 0) 100%
+    );
+  }
+
+  /* The foot of the page carries real body copy at small sizes, so it
+     gets the same well as a band rather than a pool. */
+  .footer-well {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .footer-well::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: linear-gradient(
+      to bottom,
+      rgb(1 1 1 / 0) 0%,
+      rgb(1 1 1 / 0.72) 14%,
+      rgb(1 1 1 / 0.82) 100%
+    );
+  }
+
 }
 
 @keyframes reveal-rise {
@@ -524,6 +1075,18 @@
 /* Switching release is the page's one real interactive moment and it
    used to happen with no transition at all. Base UI renders only the
    selected panel, so a plain entry animation replays on every switch. */
+/* The ring that fires where the preview's pointer clicks. */
+@keyframes click-pulse {
+  from {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(0.35);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.5);
+  }
+}
+
 @keyframes panel-in {
   from {
     opacity: 0;
@@ -554,6 +1117,178 @@
   }
   to {
     transform: scaleX(1);
+  }
+}
+
+/* ------------------------------------------------------------------
+   The sky's colour, on a slow loop.
+
+   The three overlap generously on purpose. A hard handover reads as a
+   slideshow; a long dissolve reads as one sky changing around you,
+   which is the whole point. The cycle closes back onto the crimson
+   field at 100% so the loop has no seam.
+   ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------
+   Camera shake.
+
+   Small enough that you would not catch it staring, large enough that
+   the field stops feeling welded to the screen. The steps are at
+   uneven percentages on purpose: evenly spaced ones read as a pendulum.
+   ------------------------------------------------------------------ */
+@keyframes port-drift-a {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  13% {
+    transform: translate3d(-3px, 2px, 0);
+  }
+  27% {
+    transform: translate3d(2px, -4px, 0);
+  }
+  41% {
+    transform: translate3d(-5px, -1px, 0);
+  }
+  58% {
+    transform: translate3d(3px, 3px, 0);
+  }
+  72% {
+    transform: translate3d(-1px, -3px, 0);
+  }
+  86% {
+    transform: translate3d(4px, 1px, 0);
+  }
+}
+
+@keyframes port-drift-b {
+  0%,
+  100% {
+    transform: rotate(0deg) translate3d(0, 0, 0) scale(1.05);
+  }
+  19% {
+    transform: rotate(0.12deg) translate3d(2px, -2px, 0) scale(1.05);
+  }
+  37% {
+    transform: rotate(-0.09deg) translate3d(-3px, 1px, 0) scale(1.05);
+  }
+  56% {
+    transform: rotate(0.15deg) translate3d(1px, 3px, 0) scale(1.05);
+  }
+  78% {
+    transform: rotate(-0.13deg) translate3d(-2px, -1px, 0) scale(1.05);
+  }
+}
+
+/* One traverse. The distance is over-provisioned against the rotated
+   container's width so a trail is always entering before the one
+   ahead of it has left. */
+@keyframes warp-run {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(240vw, 0, 0);
+  }
+}
+
+@keyframes sky-astro {
+  0%,
+  22% {
+    opacity: 1;
+  }
+  38%,
+  84% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes sky-gas {
+  0%,
+  22% {
+    opacity: 0;
+  }
+  38%,
+  55% {
+    opacity: 1;
+  }
+  71%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes sky-aurora {
+  0%,
+  55% {
+    opacity: 0;
+  }
+  71%,
+  84% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ------------------------------------------------------------------
+   The sky's colour, keyed to scroll position rather than to time.
+
+   The three fields overlap generously on purpose. A hard handover
+   reads as a slideshow; twenty-odd percent of overlap reads as one
+   sky changing around you, which is the whole point.
+   ------------------------------------------------------------------ */
+@keyframes sky-astro {
+  0% {
+    opacity: 1;
+  }
+  24% {
+    opacity: 1;
+  }
+  48% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes sky-gas {
+  0% {
+    opacity: 0;
+  }
+  24% {
+    opacity: 0;
+  }
+  52% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes sky-aurora {
+  0% {
+    opacity: 0;
+  }
+  72% {
+    opacity: 0;
+  }
+  94% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
   }
 }
 

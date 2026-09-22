@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
 
 import { PageHeader } from "@/components/chrome/page-header";
+import { Ruler } from "@/components/chrome/ruler";
 import { SiteFooter } from "@/components/chrome/site-footer";
 import { SiteHeader } from "@/components/chrome/site-header";
 import { StandingCta } from "@/components/chrome/standing-cta";
 import { EarlyAccess } from "@/components/sections/early-access";
+import { CloneDemo } from "@/components/sections/clone-demo";
+import { KitStates } from "@/components/sections/kit-states";
 import { Marketplace } from "@/components/sections/marketplace";
+import { MarketplaceScope } from "@/components/sections/marketplace-scope";
 import { photos } from "@/lib/photos";
 
 export const metadata: Metadata = {
@@ -44,7 +48,18 @@ export default function MarketplacePage() {
           lede="The parts a build needs are mostly parts somebody already has. The marketplace exists for the ones they do not."
           photo={photos.components}
         />
+
+        {/* Same divider system as the landing page. The page header
+            carries the site-level number, so these are labelled only —
+            two numbering scales on one page would just compete. */}
         <Marketplace />
+        <Ruler label="Preview" />
+        <CloneDemo />
+        <Ruler label="The four states" />
+        <KitStates />
+        <Ruler label="Scope" />
+        <MarketplaceScope />
+        <Ruler label="Early access" />
         <EarlyAccess />
       </main>
 

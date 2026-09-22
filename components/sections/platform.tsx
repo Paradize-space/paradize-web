@@ -20,9 +20,9 @@ import {
   defaultReleaseId,
   deskSensor,
   statusCopy,
-  type RequirementStatus,
 } from "@/lib/data/desk-sensor";
 import { photos } from "@/lib/photos";
+import { statusTone } from "@/lib/status-tone";
 
 /**
  * A release, and what building it would actually cost you.
@@ -36,13 +36,6 @@ import { photos } from "@/lib/photos";
  * lib/data/desk-sensor.ts. It is labelled as sample data on the surface,
  * not just in a comment.
  */
-const statusTone: Record<RequirementStatus, string> = {
-  ready: "border-ok/30 bg-ok/10 text-ok",
-  missing: "border-gone/35 bg-gone/10 text-gone",
-  "in-use": "border-warn/30 bg-warn/10 text-warn",
-  "tool-ready": "border-line-2 bg-slab text-mute",
-};
-
 export function Platform() {
   const [releaseId, setReleaseId] = useState(defaultReleaseId);
 

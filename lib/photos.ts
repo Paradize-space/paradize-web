@@ -93,6 +93,20 @@ export const photos = {
 export const photoCredits: Photo[] = Object.values(photos);
 
 /**
+ * Photography used as a SURFACE rather than as a picture.
+ *
+ * The research page's module is drawn, but its metal is a photograph
+ * of galvanised steel multiplied under a lighting ramp — every
+ * gradient that could be written by hand produces a smooth surface,
+ * and real metal is scratches, spangle and grime at a dozen scales at
+ * once. Same licence, same credit, so it belongs in the footer with
+ * the rest.
+ */
+export const textureCredits = [
+  { by: "remapstudio", handle: "remapstudio" },
+];
+
+/**
  * The looping clip behind the title screen.
  *
  * Pexels Licence: commercial use permitted, modification permitted,

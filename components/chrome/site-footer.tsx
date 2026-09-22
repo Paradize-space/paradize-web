@@ -1,8 +1,14 @@
 import Link from "next/link";
 
 import { Wordmark } from "@/components/chrome/site-header";
+import { partCredits } from "@/lib/data/demo-market";
 import { navItems } from "@/lib/nav";
-import { heroVideo, photoCredits, unsplashProfile } from "@/lib/photos";
+import {
+  heroVideo,
+  photoCredits,
+  textureCredits,
+  unsplashProfile,
+} from "@/lib/photos";
 
 /**
  * The foot of the document.
@@ -13,8 +19,16 @@ import { heroVideo, photoCredits, unsplashProfile } from "@/lib/photos";
  * it, but the pictures were taken by people.
  */
 export function SiteFooter() {
+  // The parts marketplace preview carries its own photographs, so its
+  // photographers belong in the same list. Keyed by handle, so anyone
+  // appearing in both sets is credited once.
   const uniqueCredits = [
-    ...new Map(photoCredits.map((p) => [p.handle, p])).values(),
+    ...new Map(
+      [...photoCredits, ...partCredits, ...textureCredits].map((p) => [
+        p.handle,
+        p,
+      ]),
+    ).values(),
   ];
 
   return (
