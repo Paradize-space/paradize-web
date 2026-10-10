@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Fragment_Mono, Work_Sans } from "next/font/google";
 
 import { SmoothScroll } from "@/components/chrome/smooth-scroll";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 /**
@@ -26,14 +27,14 @@ const fragmentMono = Fragment_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://paradize.space"),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "Paradize — a home for people who build hardware",
     template: "%s — Paradize",
   },
   description:
     "Document hardware projects, version the hardware and software together, check what you already have, and source what you still need. Paradize is in development.",
-  applicationName: "Paradize",
+  applicationName: SITE_NAME,
   keywords: [
     "hardware projects",
     "hardware documentation",
@@ -44,8 +45,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
-    url: "https://paradize.space",
-    siteName: "Paradize",
+    url: "/",
+    siteName: SITE_NAME,
     title: "Paradize — a home for people who build hardware",
     description:
       "Document hardware projects, version the hardware and software together, check what you already have, and source what you still need.",
