@@ -1,26 +1,30 @@
+import "server-only";
+
+import { count, eq, gte } from "drizzle-orm";
+
+import { getDb } from "@/lib/db/client";
+import { waitlist } from "@/lib/db/schema";
+
+import type { WaitlistInterest } from "./signup";
+
 /**
  * Waitlist storage adapter.
  *
- * There is no waitlist store in this repository yet, so submission is isolated
- * behind this one module. Nothing else in the app knows how a signup is stored.
+ * Signups are rows in the `waitlist` table (lib/db/schema.ts), written
+ * with Drizzle over a Postgres connection to Supabase. Nothing else in
+ * the app knows how a signup is stored.
  *
- * TO CONNECT BEFORE LAUNCH
- * ------------------------
- * Set WAITLIST_WEBHOOK_URL (server-side env var) to an endpoint that persists
- * the signup: a form backend, an ESP list endpoint, a serverless function
- * writing to a database, or an internal API. Optionally set
- * WAITLIST_WEBHOOK_TOKEN, which is sent as `Authorization: Bearer <token>`.
- * The endpoint receives a JSON body shaped like `WaitlistSignup`.
+ * TO CONNECT
+ * ----------
+ * Set DATABASE_URL to the Supabase transaction pooler's connection
+ * string (port 6543) as a server-side env var, and apply the migrations
+ * in drizzle/ (`npm run db:migrate`). It carries the database password,
+ * so it must never get a NEXT_PUBLIC_ prefix.
  *
- * Until that variable is set, `storeSignup` returns `{ status: "unconfigured" }`
- * and the form shows an explicit preview state. It never reports success for an
- * address it did not store.
- *
- * To swap in a different provider (EmailJS, Resend, Supabase, a Google Sheet),
- * replace the body of `storeSignup` and keep the return contract.
+ * Until it is set, `storeSignup` returns `{ status: "unconfigured" }`.
+ * The route logs that and gives the visitor the same "not stored" as any
+ * other failure. It never reports success for an address it did not store.
  */
-
-export type WaitlistInterest = "platform" | "marketplace" | "research";
 
 export type WaitlistSignup = {
   email: string;
@@ -30,64 +34,85 @@ export type WaitlistSignup = {
 };
 
 export type WaitlistResult =
-  | { status: "stored" }
+  // `isNew` is false when the address was already on the list. The form
+  // is told "stored" either way, so it never reveals who has signed up.
+  | { status: "stored"; isNew: boolean }
   | { status: "unconfigured" }
   | { status: "error"; message: string };
 
-export const waitlistInterests: {
-  value: WaitlistInterest;
-  label: string;
-}[] = [
-  { value: "platform", label: "Platform" },
-  { value: "marketplace", label: "Marketplace" },
-  { value: "research", label: "Research" },
-];
-
-/** A deliberately plain check: reject what is obviously not an address. */
-export function isValidEmail(value: string): boolean {
-  const email = value.trim();
-  if (email.length < 6 || email.length > 254) return false;
-  if (/\s/.test(email)) return false;
-  return /^[^@]+@[^@.]+(\.[^@.]+)+$/.test(email);
+export function isWaitlistConfigured(): boolean {
+  return getDb() !== null;
 }
 
-export function isWaitlistConfigured(): boolean {
-  return Boolean(process.env.WAITLIST_WEBHOOK_URL);
+/**
+ * Names a failed query by its error code only: a Postgres SQLSTATE, or
+ * the driver's own code for a connection that never opened. Drizzle's
+ * error carries the query's parameters, the address among them, and its
+ * message prints them. These messages end up in Vercel's logs.
+ */
+function describeFailure(error: unknown): string {
+  const cause = error instanceof Error && error.cause ? error.cause : error;
+  const code =
+    cause && typeof cause === "object" && "code" in cause
+      ? String(cause.code)
+      : "no code";
+  return `Database query failed (${code}).`;
 }
 
 export async function storeSignup(
   signup: WaitlistSignup,
 ): Promise<WaitlistResult> {
-  const endpoint = process.env.WAITLIST_WEBHOOK_URL;
-  if (!endpoint) return { status: "unconfigured" };
-
-  const token = process.env.WAITLIST_WEBHOOK_TOKEN;
+  const db = getDb();
+  if (!db) return { status: "unconfigured" };
 
   try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        accept: "application/json",
-        ...(token ? { authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify(signup),
-      signal: AbortSignal.timeout(8000),
-    });
+    // ON CONFLICT (email) DO NOTHING ... RETURNING. Postgres only returns
+    // rows it inserted, so an address already on the list comes back as
+    // an empty array, which is how `isNew` is known.
+    const inserted = await db
+      .insert(waitlist)
+      .values({
+        email: signup.email,
+        interests: signup.interests,
+        source: signup.source,
+        createdAt: new Date(signup.submittedAt),
+      })
+      .onConflictDoNothing({ target: waitlist.email })
+      .returning({ id: waitlist.id });
 
-    if (!response.ok) {
-      return {
-        status: "error",
-        message: `Waitlist store responded with ${response.status}.`,
-      };
-    }
-
-    return { status: "stored" };
+    return { status: "stored", isNew: inserted.length > 0 };
   } catch (error) {
-    return {
-      status: "error",
-      message:
-        error instanceof Error ? error.message : "Unknown transport failure.",
-    };
+    return { status: "error", message: describeFailure(error) };
+  }
+}
+
+/** How many thank-you emails went out since `since`, for the daily cap. */
+export async function countConfirmationsSince(since: Date): Promise<number> {
+  const db = getDb();
+  if (!db) return 0;
+
+  try {
+    const [row] = await db
+      .select({ sent: count() })
+      .from(waitlist)
+      .where(gte(waitlist.confirmationSentAt, since));
+    return row?.sent ?? 0;
+  } catch (error) {
+    throw new Error(describeFailure(error));
+  }
+}
+
+/** Records that the thank-you email went out, so a missing one shows up. */
+export async function markConfirmationSent(email: string): Promise<void> {
+  const db = getDb();
+  if (!db) return;
+
+  try {
+    await db
+      .update(waitlist)
+      .set({ confirmationSentAt: new Date() })
+      .where(eq(waitlist.email, email));
+  } catch (error) {
+    throw new Error(describeFailure(error));
   }
 }

@@ -20,6 +20,9 @@ not the platform, the marketplace or a research portal.
   right register instead of the default look.
 - **lenis** for smooth scrolling. Scroll-driven _animation_ is plain CSS —
   see below.
+- **Drizzle** over postgres.js for the waitlist table in Supabase, the same
+  stack as paradize-platform, and Hostinger's **`hostinger-mail-api-sdk`** for
+  the thank-you email — see [The waitlist](#the-waitlist).
 
 ```bash
 npm install
@@ -27,6 +30,8 @@ npm run dev        # http://localhost:3000
 npm run build
 npm run lint
 npm run typecheck
+npm run db:generate  # a migration from lib/db/schema.ts
+npm run db:migrate   # apply it to DATABASE_URL
 ```
 
 ## The design
@@ -161,21 +166,159 @@ build counts as _in use_, not as _ready_.
 
 ## The waitlist
 
-`lib/waitlist/adapter.ts` is the only module that knows how a signup is stored.
-Until `WAITLIST_WEBHOOK_URL` is set, it returns `{ status: "unconfigured" }`,
-the route answers **501**, and the form renders an explicit _Not stored_ panel.
+A signup is one row in the `waitlist` table in Supabase's Postgres, and one
+thank-you email from the paradize.space mailbox. Both run inside the
+`/api/waitlist` function on Vercel; there is no other server.
 
-**It never shows success for an address it did not store.** That is the point
-of the adapter, and it is worth keeping when you connect a real store.
-
-```bash
-WAITLIST_WEBHOOK_URL=https://…      # required to actually store signups
-WAITLIST_WEBHOOK_TOKEN=…            # optional, sent as Authorization: Bearer
+```
+form → POST /api/waitlist
+         1. insert into `waitlist` (Drizzle)    lib/waitlist/adapter.ts
+         2. answer 201
+         3. after(): Hostinger Mail API send    lib/waitlist/confirmation.ts
+            → set confirmation_sent_at
 ```
 
-The endpoint receives a JSON body shaped like `WaitlistSignup`. Response codes:
-`201` stored, `501` no store connected, `400` invalid address, `502` the store
-failed.
+| file                           | holds                                                       |
+| ------------------------------ | ----------------------------------------------------------- |
+| `lib/db/schema.ts`             | the table, in Drizzle; migrations are generated from it     |
+| `lib/db/client.ts`             | one postgres.js connection pool per instance                |
+| `lib/waitlist/signup.ts`       | interests and the address check, shared with the form       |
+| `lib/waitlist/adapter.ts`      | storing a signup; server only                               |
+| `lib/waitlist/confirmation.ts` | the email and its send; server only                         |
+| `drizzle/`                     | generated migrations; never edit one that has been applied |
+
+`lib/waitlist/adapter.ts` is the only module that knows how a signup is stored.
+Until `DATABASE_URL` is set, it returns `{ status: "unconfigured" }`; the route
+logs `[waitlist] not stored: DATABASE_URL is not set.` and answers **503**.
+
+**It never shows success for an address it did not store.** That is the point
+of the adapter. The email sits outside that promise: a signup counts once the
+row exists, and a failed email never turns it into an error.
+
+**The page never describes the backend.** Every failure reaches a visitor as
+the same _Not stored_ panel and the same `{ "status": "error" }` body: no
+setting names, no service names, no configuration state. Anyone can call the
+route, so the reason a signup failed goes to the server log and nowhere else.
+
+- **One email per address, ever.** `email` is unique, and the insert is
+  `ON CONFLICT DO NOTHING`, which returns only rows it inserted. A repeat signup
+  changes nothing and sends nothing, but still answers 201, so the form never
+  reveals who is on the list. The first signup's interests are the ones kept.
+  Ten simultaneous signups for one address still make one row and one email.
+- **The database holds the rules too.** Interests are a Postgres enum, and a
+  check constraint refuses an address that is not lowercase, so a write from
+  anywhere else cannot add a second spelling of the same address.
+- **Locked to the Data API.** Row-level security is on with no policies. The
+  site connects as the table's owner, which RLS does not restrict; Supabase's
+  publishable key gets no rows and can write none. Supabase still grants its
+  API roles (`anon`, `authenticated`) every privilege on new public tables in
+  older projects, so migration `0001` revokes those too, on the table and its
+  sequence. It skips roles that don't exist, so it also runs on plain Postgres.
+- **Logs carry codes, never addresses.** A failure is logged as its Postgres
+  error code or the mail API's code (`[waitlist] … (28P01)`, `(RATE_LIMITED)`).
+  Postgres's own error text quotes the failing row, address included, so it is
+  never logged.
+- **A missed email is visible.** Rows with an empty `confirmation_sent_at` never
+  got one: the send failed, the daily limit was reached, or mail was not
+  configured yet. Vercel's function logs carry the reason, prefixed
+  `[waitlist]`.
+
+### Connecting it
+
+Supabase's Connect panel lists two pooler strings for the project, and each
+job takes a different one:
+
+| use                   | string                                    | why                                                            |
+| --------------------- | ----------------------------------------- | -------------------------------------------------------------- |
+| the site (Vercel)     | transaction pooler, port **6543**         | built for functions that open short-lived connections          |
+| `npm run db:migrate`  | session pooler, port **5432**             | a migration is one session; the direct connection is IPv6-only |
+
+The transaction pooler cannot keep prepared statements, which is why the client
+sets `prepare: false`.
+
+1. Create a Supabase project, then apply the migrations:
+
+   ```bash
+   DATABASE_URL="<session pooler string>" npm run db:migrate
+   ```
+
+2. In hPanel, create a Mail API token for the sending mailbox (Emails → the
+   domain → Agentic Mail → API access), then read the mailbox's `resourceId`:
+
+   ```bash
+   curl -s https://api.mail.hostinger.com/api/v1/me \
+     -H "Authorization: Bearer $HOSTINGER_MAIL_TOKEN"
+   ```
+
+3. Set these on the Vercel project, server-side (no `NEXT_PUBLIC_`), and
+   redeploy:
+
+```bash
+DATABASE_URL=postgresql://postgres.<ref>:<password>@<pooler host>:6543/postgres
+HOSTINGER_MAIL_TOKEN=…
+HOSTINGER_MAIL_MAILBOX_ID=AC…
+```
+
+For local testing, put the same lines in `.env.local`, which git ignores.
+
+To change the table, edit `lib/db/schema.ts`, run `npm run db:generate` to
+write a new migration into `drizzle/`, review the SQL, and apply it with
+`npm run db:migrate`.
+
+Response codes: `201` stored (new or already on the list), `400` invalid
+address or a domain that cannot receive mail, `403` refused (wrong origin or
+BotID), `413` body too large, `503` no database configured or the bot check is
+unavailable, `502` the database failed. Every failure sends the same
+`{ "status": "error" }`; only the status and the log tell them apart.
+
+### Protecting it
+
+Every page is static and served from Vercel's cache, so page traffic, floods
+included, never runs a function. `POST /api/waitlist` is the one route that
+does, and on Hobby an invocation spent on a bot counts against the same
+limits as a real signup, and going over them pauses the project. So the route
+is guarded in two layers.
+
+**At Vercel's edge, before any function starts.** Traffic the Vercel Firewall
+denies, challenges or rate-limits is not billed and never reaches the
+function. These are project settings (Firewall → Rules), not code, and need
+someone with access to the project; Hobby allows one rate-limit rule and three
+custom rules:
+
+| rule                       | condition                                       | action                                    |
+| -------------------------- | ----------------------------------------------- | ----------------------------------------- |
+| Rate limit (custom rule)   | path equals `/api/waitlist`, method equals POST | fixed window, 60 s, 5 requests, key IP → Deny |
+| Other methods (custom rule)| path equals `/api/waitlist`, method not POST     | Deny                                      |
+| Bot Protection (managed)   | —                                               | Log first; Challenge once the log looks right |
+| Attack Mode                | —                                               | off; switch on only during an attack      |
+
+Rate-limit counters are kept per region, so traffic spread across regions can
+pass a little more than five a minute in total.
+
+**In the function, cheapest check first,** each before any database or email
+work (`lib/waitlist/guards.ts`):
+
+1. Body over 1 KB → 413.
+2. `Origin` missing or not this host → 403. A script can forge it; other
+   sites' pages cannot.
+3. Honeypot (`website`) filled → answered 201 as if stored, and nothing is
+   stored or sent. No person can see or reach the field, and a fake success
+   gives a bot nothing to adapt to. This is the one deliberate exception to
+   never claiming a save.
+4. Vercel BotID, basic level (free) → 403 if it flags the request. It is told
+   the truth, unlike the honeypot, because BotID can be wrong about a person.
+   It checks for real only on Vercel (`VERCEL=1`); anywhere else it reports a
+   human. It needs **OIDC enabled** in the Vercel project; without it the
+   check throws and the route refuses with 503 instead of letting traffic
+   through unchecked. The client half is `instrumentation-client.ts`.
+5. An address this instance stored in the last 10 minutes → answered 201 from
+   memory, without touching the database.
+6. The address's domain has no mail servers (no MX, or a null MX) → 400. A DNS
+   failure lets the signup through rather than turn a person away.
+
+After a new signup is stored, the thank-you email is sent only while fewer
+than 900 have gone out in the last 24 hours, below Hostinger's 1,000 a day.
+Past that, signups are still stored with `confirmation_sent_at` empty.
 
 ## Routes and metadata
 
