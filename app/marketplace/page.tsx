@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/marketplace" },
   openGraph: {
     type: "website",
-    url: "https://paradize.space/marketplace",
+    url: "/marketplace",
     siteName: "Paradize",
     title: "Marketplace — Paradize",
     description:

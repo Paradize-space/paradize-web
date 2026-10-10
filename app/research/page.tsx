@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/research" },
   openGraph: {
     type: "website",
-    url: "https://paradize.space/research",
+    url: "/research",
     siteName: "Paradize",
     title: "Research — Paradize",
     description:
