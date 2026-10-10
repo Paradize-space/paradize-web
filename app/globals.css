@@ -7,8 +7,7 @@
 /* ==================================================================
    PARADIZE — design tokens
 
-   The register is taken from oxiinstruments.com, measured rather than
-   guessed. What that site actually does:
+   The register, measured rather than guessed:
 
      · the ground is very nearly pure black, #010101, and the ink is a
        warm off-white, #f1f1f1. There is no third neutral doing real
@@ -24,8 +23,7 @@
      · photography is full-bleed, dark and top-lit, and it is the thing
        the layout is built around.
 
-   Applied here with Work Sans (Work Sans Variable on OXI) and Fragment
-   Mono (the same face OXI uses).
+   Applied here with Work Sans and Fragment Mono.
    ================================================================== */
 @theme {
   /* --- Ground and ink -------------------------------------------- */
@@ -41,7 +39,7 @@
   --color-line: #1c1c1e;
   --color-line-2: #2f2f33;
 
-  /* The two lifted surfaces OXI uses for blocks and cards. */
+  /* The two lifted surfaces, for blocks and cards. */
   --color-slab: #0c0c0f;
   --color-slate: #253042;
 

@@ -1,10 +1,16 @@
-# paradize.space
+# Paradize
 
-The pre-launch homepage for Paradize: one organisation with three connected
-streams — a platform for documenting and versioning hardware projects, a
-marketplace for the parts those projects need, and an internal research stream.
+**Paradize is a home for people who build hardware.** Document hardware
+projects, version the hardware and software together, check what you already
+have, and source what you still need. Paradize is in development.
 
-This is a landing page with one small local concept demonstration. It is not
+This repository is the source of the website at
+**[paradize.space](https://paradize.space)**: the pre-launch homepage for one
+organisation with three connected streams — a platform for documenting and
+versioning hardware projects, a marketplace for the parts those projects need,
+and an internal research stream.
+
+It is a landing page with one small local concept demonstration. It is not
 the platform, the marketplace or a research portal.
 
 ## Stack
@@ -31,8 +37,7 @@ npm run typecheck
 
 ## The design
 
-The register is taken from [oxiinstruments.com](https://oxiinstruments.com),
-measured rather than guessed. What that site does, and what is reproduced here:
+The register, measured rather than guessed:
 
 - the ground is **very nearly pure black** (`#010101`) and the ink is a warm
   off-white (`#f1f1f1`). There is no third neutral doing real work —
@@ -52,18 +57,16 @@ Signal colour is spent only inside the requirement check, where green / amber /
 red mean _free_, _committed elsewhere_ and _not held_. Nowhere else.
 
 **The ground never changes.** An inverted off-white section was tried and
-removed: the reference does use light blocks, but on this page it broke the
-register rather than giving it rhythm. The only off-white surfaces are the two
-small waitlist cards, which are the reference's own move. If a light band is
+removed: on this page it broke the register rather than giving it rhythm. The
+only off-white surfaces are the two small waitlist cards. If a light band is
 ever reconsidered, note that the fixed header has no background of its own and
 its nav and scrim will vanish into it.
 
 ## Motion
 
-The reference runs GSAP + ScrollTrigger + **SplitText** + Lenis, with a
-scroll-scrubbed Lottie and three looping product videos. The videos and the
-Lottie are not reproducible here — there is no footage and no product — but
-SplitText is the part that carries most of the feel, and it needs no assets.
+Most of the feel comes from headings whose words rise in one after another,
+the effect usually built with GSAP's **SplitText**. It needs no assets, and
+here it needs no JavaScript either.
 
 **All CSS scroll-driven animation** (`animation-timeline: view()`), no
 JavaScript:
@@ -102,9 +105,9 @@ time of writing) the rules never apply: words sit at rest, hairlines are drawn
 at full width, photographs are static. Nothing is ever hidden waiting for an
 animation that cannot run.
 
-`lenis` stays, because the inertia is a large part of what makes the reference
-feel the way it does. It does not initialise at all under reduced motion —
-hijacking the scroll is exactly what that setting is asking you not to do.
+`lenis` stays, because the inertia is a large part of how the page feels. It
+does not initialise at all under reduced motion — hijacking the scroll is
+exactly what that setting is asking you not to do.
 
 ## The measuring edge
 
@@ -187,7 +190,7 @@ failed.
 | `/`                | `app/page.tsx`            | the page                                                     |
 | `/opengraph-image` | `app/opengraph-image.tsx` | generated at build with `next/og`                            |
 | `/robots.txt`      | `app/robots.ts`           | allows everything except `/api/`                             |
-| `/sitemap.xml`     | `app/sitemap.ts`          | one URL, honestly                                            |
+| `/sitemap.xml`     | `app/sitemap.ts`          | the three pages, each dated by its last real change          |
 | `/icon.svg`        | `app/icon.svg`            |                                                              |
 | 404                | `app/not-found.tsx`       | styled; Next's default is white and reads as a broken deploy |
 
@@ -197,10 +200,25 @@ of how small the source was — the weight is in the output entropy. Flat black
 encodes to 53 KB, loads instantly in a feed, and looks like the hero anyway.
 Fonts for it are static TTFs in `assets/`, read at build time.
 
-`components/chrome/structured-data.tsx` emits Organization and WebSite JSON-LD.
-It is deliberately thin — no `founder`, `foundingDate`, `sameAs` or
+`components/chrome/structured-data.tsx` emits Organization and WebSite JSON-LD
+on the home page, which is the only place Google reads a site name from. It
+is deliberately thin — no `founder`, `foundingDate`, `sameAs` or
 `contactPoint`, because none of those are known facts, and structured data is
 the worst possible place to guess.
+
+**The site's address and names live in `lib/site.ts`**, and everything that
+tells a crawler who we are reads from there: the canonical links, the sitemap,
+`robots.txt` and the structured data. The name is **Paradize**. The alternate
+names are "Paradize Space", which is what people type when they are told the
+address out loud and do not know `.space` is a domain ending, and the domain
+itself. The address is the apex, `https://paradize.space`; www redirects to it
+with a 308.
+
+**Sitemap dates are written by hand.** Google only trusts `<lastmod>` when it
+is consistently accurate, so a build-time date that says "now" on every deploy
+teaches it to ignore the field. When a page's main copy, links or structured
+data change, bump that page's date in `app/sitemap.ts`; leave it alone for a
+style pass.
 
 ## Notes for Next.js 16
 
@@ -248,9 +266,9 @@ that licence draws its lines.
 
 ## Copy
 
-The copy was rewritten once because it read as machine-written. The design was
-not the problem; the sentences were. Scored against five patterns, the first
-draft carried **32 flags across 35 sentences** — roughly one per sentence:
+The copy is held to five rules. The design was never the problem; the
+sentences were. Scored against these five patterns, the first draft carried
+**32 flags across 35 sentences** — roughly one per sentence:
 
 | pattern                                                                      | before | after |
 | ---------------------------------------------------------------------------- | ------ | ----- |
@@ -272,7 +290,7 @@ Two things were deliberately **left alone**:
 
 - the fixture prose in `lib/data/desk-sensor.ts` (`Four M2 screws`, `115200
 baud`, `heat from the regulator stops skewing readings`). Concrete technical
-  detail is the opposite of the tell.
+  detail is what these rules exist to protect.
 - every honesty label — `Sample project · not a live account`, `Preview · no
 store connected`, `Illustrative photograph — not the sample project`. Those
   contain `not`, and they stay: they are functional disclosure, not rhetoric.
