@@ -7,11 +7,12 @@ import {
   storeSignup,
   type WaitlistSignup,
 } from "@/lib/waitlist/adapter";
-import { sendConfirmation } from "@/lib/waitlist/confirmation";
+import { sendEmail } from "@/lib/emails/send";
 import {
   acceptsMail,
   isSameOrigin,
   MAX_BODY_BYTES,
+  readBodyWithin,
   rememberStored,
   storedRecently,
 } from "@/lib/waitlist/guards";
@@ -64,8 +65,8 @@ export async function POST(request: Request) {
     return refused(403);
   }
 
-  const raw = await request.text();
-  if (raw.length > MAX_BODY_BYTES) return refused(413);
+  const raw = await readBodyWithin(request, MAX_BODY_BYTES);
+  if (raw === null) return refused(413);
 
   let payload: unknown;
   try {
@@ -100,13 +101,14 @@ export async function POST(request: Request) {
     );
   }
 
-  // BotID, at the free basic level. It only runs for real on Vercel;
-  // anywhere else it reports a human, so local runs work. A flagged
-  // request is told the truth ("not stored"), unlike the honeypot,
-  // because BotID can be wrong about a real person.
+  // BotID, at the free basic level. It reports a human only under
+  // `next dev`; any production build checks for real, and if the check
+  // can't run (no Vercel OIDC token, as under a local `next start`) the
+  // catch below refuses. Nothing in the environment can switch it off
+  // quietly. A flagged request is told the truth ("not stored"), unlike
+  // the honeypot, because BotID can be wrong about a real person.
   try {
     const verdict = await checkBotId({
-      developmentOptions: { isDevelopment: process.env.VERCEL !== "1" },
       advancedOptions: { checkLevel: "basic" },
     });
     if (verdict.isBot || verdict.isVerifiedBot) {
@@ -184,7 +186,7 @@ async function confirm(signup: WaitlistSignup) {
     return;
   }
 
-  const sent = await sendConfirmation(signup.email, signup.interests);
+  const sent = await sendEmail(signup.email, "waitlist-confirmation");
 
   if (sent.status === "error") {
     console.error("[waitlist] confirmation failed:", sent.message);

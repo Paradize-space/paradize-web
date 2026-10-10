@@ -13,6 +13,41 @@ import { Resolver } from "node:dns/promises";
 export const MAX_BODY_BYTES = 1024;
 
 /**
+ * Reads the body, but stops once it passes `max` bytes and returns null.
+ * Content-Length can't be trusted on its own: a chunked request has none,
+ * and `request.text()` would read all of it into memory first.
+ */
+export async function readBodyWithin(
+  request: Request,
+  max: number,
+): Promise<string | null> {
+  if (!request.body) return "";
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > max) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
+}
+
+/**
  * The form posts from the page it is on, so Origin must name this host.
  * Browsers always send Origin on a POST. A script can forge it, so this
  * only turns away the lazy ones, and other sites' pages posting here.

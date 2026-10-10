@@ -21,17 +21,20 @@ not the platform, the marketplace or a research portal.
 - **lenis** for smooth scrolling. Scroll-driven _animation_ is plain CSS —
   see below.
 - **Drizzle** over postgres.js for the waitlist table in Supabase, the same
-  stack as paradize-platform, and Hostinger's **`hostinger-mail-api-sdk`** for
-  the thank-you email — see [The waitlist](#the-waitlist).
+  stack as paradize-platform — see [The waitlist](#the-waitlist).
+- **Maizzle** for every email, sent with Hostinger's
+  **`hostinger-mail-api-sdk`** — see [Email](#email).
 
 ```bash
 npm install
-npm run dev        # http://localhost:3000
-npm run build
+npm run dev          # http://localhost:3000 (compiles emails first)
+npm run build        # compiles emails first
 npm run lint
-npm run typecheck
+npm run typecheck    # compiles emails first
 npm run db:generate  # a migration from lib/db/schema.ts
 npm run db:migrate   # apply it to DATABASE_URL
+npm run emails:dev   # preview emails/ at http://localhost:3333
+npm run emails:build # compile emails/ into lib/emails/generated.ts
 ```
 
 ## The design
@@ -174,7 +177,7 @@ thank-you email from the paradize.space mailbox. Both run inside the
 form → POST /api/waitlist
          1. insert into `waitlist` (Drizzle)    lib/waitlist/adapter.ts
          2. answer 201
-         3. after(): Hostinger Mail API send    lib/waitlist/confirmation.ts
+         3. after(): Hostinger Mail API send    lib/emails/send.ts
             → set confirmation_sent_at
 ```
 
@@ -184,7 +187,7 @@ form → POST /api/waitlist
 | `lib/db/client.ts`             | one postgres.js connection pool per instance                |
 | `lib/waitlist/signup.ts`       | interests and the address check, shared with the form       |
 | `lib/waitlist/adapter.ts`      | storing a signup; server only                               |
-| `lib/waitlist/confirmation.ts` | the email and its send; server only                         |
+| `lib/emails/send.ts`           | sends a compiled email; see [Email](#email)                 |
 | `drizzle/`                     | generated migrations; never edit one that has been applied |
 
 `lib/waitlist/adapter.ts` is the only module that knows how a signup is stored.
@@ -298,7 +301,9 @@ pass a little more than five a minute in total.
 **In the function, cheapest check first,** each before any database or email
 work (`lib/waitlist/guards.ts`):
 
-1. Body over 1 KB → 413.
+1. Body over 1 KB → 413. The body is read in chunks and dropped once it
+   passes the limit, so a request without Content-Length can't make the
+   function read more.
 2. `Origin` missing or not this host → 403. A script can forge it; other
    sites' pages cannot.
 3. Honeypot (`website`) filled → answered 201 as if stored, and nothing is
@@ -307,10 +312,12 @@ work (`lib/waitlist/guards.ts`):
    never claiming a save.
 4. Vercel BotID, basic level (free) → 403 if it flags the request. It is told
    the truth, unlike the honeypot, because BotID can be wrong about a person.
-   It checks for real only on Vercel (`VERCEL=1`); anywhere else it reports a
-   human. It needs **OIDC enabled** in the Vercel project; without it the
-   check throws and the route refuses with 503 instead of letting traffic
-   through unchecked. The client half is `instrumentation-client.ts`.
+   It reports a human only under `next dev`. Every production build checks
+   for real, and it needs **OIDC enabled** in the Vercel project to do so;
+   where it can't (OIDC off, or a local `next start`), the check throws and
+   the route refuses with 503 instead of letting traffic through unchecked.
+   Test locally with `npm run dev`. The client half is
+   `instrumentation-client.ts`.
 5. An address this instance stored in the last 10 minutes → answered 201 from
    memory, without touching the database.
 6. The address's domain has no mail servers (no MX, or a null MX) → 400. A DNS
@@ -319,6 +326,51 @@ work (`lib/waitlist/guards.ts`):
 After a new signup is stored, the thank-you email is sent only while fewer
 than 900 have gone out in the last 24 hours, below Hostinger's 1,000 a day.
 Past that, signups are still stored with `confirmation_sent_at` empty.
+
+## Email
+
+**Every email is a Maizzle template.** There is no other way to send one, and
+that is enforced, not just agreed:
+
+- A template is a Vue file in `emails/` built from Maizzle's components
+  (`Html`, `Head`, `Body`, `Container`, `Section`, `Text`, `Heading`,
+  `Button`, …) and Tailwind classes. Its subject is set in the template with
+  `defineConfig({ subject })`, and its text/plain part is written in a
+  `<Plaintext>` block. The build fails if either is missing.
+- `npm run emails:build` (`scripts/build-emails.mjs`) compiles every template
+  into `lib/emails/generated.ts`. It runs before `dev`, `build` and
+  `typecheck`, and the file is git-ignored, so the compiled output is never
+  stale and a hand edit to it never survives.
+- `sendEmail(to, name)` in `lib/emails/send.ts` takes a template **name**,
+  never content. There is no parameter for hand-written HTML.
+- ESLint (`eslint.config.mjs`) rejects importing `hostinger-mail-api-sdk`
+  anywhere but `lib/emails/send.ts`, and `@maizzle/framework` anywhere but
+  the build script and `maizzle.config.ts`, so nothing sends around it and
+  Maizzle never ships in the app.
+
+**To add an email:** create `emails/<name>.vue`, preview it with
+`npm run emails:dev` (http://localhost:3333), then call
+`sendEmail(address, "<name>")`. The name is type-checked against the compiled
+templates.
+
+**How the templates are written** (`emails/waitlist-confirmation.vue` is the
+reference):
+
+- The site's colours and type are declared as `@theme` tokens in the
+  template's `<style>`, with `@import "@maizzle/tailwindcss" source(none);`.
+  `source(none)` matters: without it Tailwind scans the whole repository and
+  the website's classes end up in the email. Use `Html`/`Head`/`Body` rather
+  than `Layout`, whose head brings its own unscoped Tailwind and an Inter font.
+- Work Sans and Fragment Mono are linked with `<Font>`; clients that ignore web
+  fonts fall back to the system stack in the tokens.
+- Everything is inlined and the `<style>` block is purged, so the compiled
+  email carries no classes. The waitlist email is about 6 KB, far under the
+  ~102 KB where Gmail clips, which is why `html.minify` is off: minifying also
+  strips the line breaks the text/plain part is built from.
+- The preview line is a hidden `div` inside `<NotPlaintext>`, not Maizzle's
+  `<Preheader>`, which teleports out of it and would lead the text/plain part.
+- Blank lines in `<Plaintext>` are `<br />&nbsp;<br />`; the converter
+  collapses consecutive `<br />`s into one line break.
 
 ## Routes and metadata
 
