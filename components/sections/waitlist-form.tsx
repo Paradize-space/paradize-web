@@ -11,24 +11,31 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { isValidEmail, waitlistInterests } from "@/lib/waitlist/adapter";
-import type { WaitlistInterest } from "@/lib/waitlist/adapter";
+import {
+  HONEYPOT_FIELD,
+  isValidEmail,
+  waitlistInterests,
+} from "@/lib/waitlist/signup";
+import type { WaitlistInterest } from "@/lib/waitlist/signup";
 
 /**
  * The waitlist form.
  *
  * The one rule this file exists to enforce: an address is only ever
  * reported as saved when the server says it was saved. The route
- * answers 201 when a store took it, and 501 when no store is connected
- * yet — and 501 renders as "not stored", never as a thank-you. Showing
- * a success state for an address that went nowhere is the single most
- * common lie on a pre-launch page and it is not worth telling.
+ * answers 201 when the address was stored; anything else renders as
+ * "not stored", never as a thank-you. Showing a success state for an
+ * address that went nowhere is the single most common lie on a
+ * pre-launch page and it is not worth telling.
+ *
+ * Why it failed stays on the server. A visitor is told the address was
+ * not saved and nothing about the backend: no setting names, no
+ * services, no configuration state.
  */
 type State =
   | { kind: "idle" }
   | { kind: "sending" }
   | { kind: "stored" }
-  | { kind: "unconfigured" }
   | { kind: "invalid"; message: string }
   | { kind: "error" };
 
@@ -40,6 +47,10 @@ export function WaitlistForm() {
   // A ref as well as state: two rapid submits can both read `sending:
   // false` before React has re-rendered, and the ref closes that window.
   const inFlight = useRef(false);
+
+  // The honeypot. Read at submit time rather than held in state, since
+  // nothing on the page should ever react to it.
+  const trap = useRef<HTMLInputElement>(null);
 
   const toggle = (value: WaitlistInterest, checked: boolean) =>
     setInterests((current) =>
@@ -67,11 +78,14 @@ export function WaitlistForm() {
       const response = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), interests }),
+        body: JSON.stringify({
+          email: email.trim(),
+          interests,
+          [HONEYPOT_FIELD]: trap.current?.value ?? "",
+        }),
       });
 
       if (response.status === 201) setState({ kind: "stored" });
-      else if (response.status === 501) setState({ kind: "unconfigured" });
       else if (response.status === 400)
         setState({
           kind: "invalid",
@@ -107,6 +121,25 @@ export function WaitlistForm() {
       className="screws border-line-2 bg-bg/90 border backdrop-blur-[2px]"
     >
       <span className="screw-b" aria-hidden="true" />
+
+      {/* Honeypot. Moved off-screen rather than display:none, which some
+          bots know to skip; out of the tab order and hidden from screen
+          readers, so no person reaches it. */}
+      <div
+        aria-hidden="true"
+        className="absolute -left-[10000px] h-px w-px overflow-hidden"
+      >
+        <label htmlFor="wl-website">Leave this field empty</label>
+        <input
+          ref={trap}
+          id="wl-website"
+          name={HONEYPOT_FIELD}
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+          defaultValue=""
+        />
+      </div>
 
       <div className="border-line border-b px-6 py-4">
         <p className="mono text-dim">Request form</p>
@@ -178,34 +211,19 @@ export function WaitlistForm() {
         </div>
 
         {/* The success case returns a different tree above, so this only
-            ever has to announce the two ways it can fail. */}
+            ever has to announce the one way it can fail. */}
         <p aria-live="polite" className="sr-only">
-          {state.kind === "unconfigured"
-            ? "Your address was not saved. The waitlist store is not connected."
-            : state.kind === "error"
-              ? "Something went wrong. Your address was not saved."
-              : ""}
+          {state.kind === "error"
+            ? "Something went wrong. Your address was not saved."
+            : ""}
         </p>
-
-        {state.kind === "unconfigured" ? (
-          <div className="border-warn/40 bg-warn/5 border px-4 py-4">
-            <p className="mono text-warn">Not stored</p>
-            <p className="text-small mt-2 max-w-[46ch]">
-              The form works, but no waitlist store is connected to this site
-              yet, so your address was <strong>not</strong> saved. Nothing was
-              sent anywhere. Set{" "}
-              <code className="data">WAITLIST_WEBHOOK_URL</code> to switch this
-              on.
-            </p>
-          </div>
-        ) : null}
 
         {state.kind === "error" ? (
           <div className="border-gone/40 bg-gone/5 border px-4 py-4">
             <p className="mono text-gone">Not stored</p>
             <p className="text-small mt-2 max-w-[46ch]">
-              Something went wrong on the way to the store, so your address was
-              not saved. Please try again in a moment.
+              Something went wrong, so your address was not saved. Please try
+              again in a moment.
             </p>
           </div>
         ) : null}
