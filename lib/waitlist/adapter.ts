@@ -1,8 +1,9 @@
 import "server-only";
 
-import { count, eq, gte } from "drizzle-orm";
+import { count, eq, gte, sql } from "drizzle-orm";
 
 import { getDb } from "@/lib/db/client";
+import { isUnsubscribeToken } from "@/lib/emails/unsubscribe-token";
 import { waitlist } from "@/lib/db/schema";
 
 import type { WaitlistInterest } from "./signup";
@@ -36,7 +37,9 @@ export type WaitlistSignup = {
 export type WaitlistResult =
   // `isNew` is false when the address was already on the list. The form
   // is told "stored" either way, so it never reveals who has signed up.
-  | { status: "stored"; isNew: boolean }
+  // A new row comes back with its unsubscribe token, for its first email.
+  | { status: "stored"; isNew: true; unsubscribeToken: string }
+  | { status: "stored"; isNew: false }
   | { status: "unconfigured" }
   | { status: "error"; message: string };
 
@@ -78,9 +81,16 @@ export async function storeSignup(
         createdAt: new Date(signup.submittedAt),
       })
       .onConflictDoNothing({ target: waitlist.email })
-      .returning({ id: waitlist.id });
+      .returning({ unsubscribeToken: waitlist.unsubscribeToken });
 
-    return { status: "stored", isNew: inserted.length > 0 };
+    const [row] = inserted;
+    return row
+      ? {
+          status: "stored",
+          isNew: true,
+          unsubscribeToken: row.unsubscribeToken,
+        }
+      : { status: "stored", isNew: false };
   } catch (error) {
     return { status: "error", message: describeFailure(error) };
   }
@@ -114,5 +124,41 @@ export async function markConfirmationSent(email: string): Promise<void> {
       .where(eq(waitlist.email, email));
   } catch (error) {
     throw new Error(describeFailure(error));
+  }
+}
+
+export type UnsubscribeResult =
+  | { status: "unsubscribed" }
+  // No row has this token: a link that was cut short or mistyped.
+  | { status: "unknown" }
+  | { status: "unconfigured" }
+  | { status: "error"; message: string };
+
+/**
+ * Unsubscribes the address an unsubscribe link belongs to. Running it
+ * twice is harmless: the first time is the one recorded.
+ *
+ * The token is the only thing that identifies the address. It is random,
+ * so telling a stranger whether one exists gives nothing away, and the
+ * page can say so plainly when a link is broken.
+ */
+export async function unsubscribe(token: string): Promise<UnsubscribeResult> {
+  // Postgres rejects a malformed UUID with an error, not an empty result.
+  if (!isUnsubscribeToken(token)) return { status: "unknown" };
+
+  const db = getDb();
+  if (!db) return { status: "unconfigured" };
+
+  try {
+    const updated = await db
+      .update(waitlist)
+      .set({ unsubscribedAt: sql`coalesce(${waitlist.unsubscribedAt}, now())` })
+      .where(eq(waitlist.unsubscribeToken, token))
+      .returning({ id: waitlist.id });
+    return updated.length > 0
+      ? { status: "unsubscribed" }
+      : { status: "unknown" };
+  } catch (error) {
+    return { status: "error", message: describeFailure(error) };
   }
 }

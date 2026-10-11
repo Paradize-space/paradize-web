@@ -6,9 +6,8 @@ import {
   type V1SendRequest,
 } from "hostinger-mail-api-sdk";
 
-import { SITE_NAME } from "@/lib/site";
-
-import { emails, type EmailName } from "./generated";
+import { emails, UNSUBSCRIBE_MARKER, type EmailName } from "./generated";
+import { isUnsubscribeToken } from "./unsubscribe-token";
 
 /**
  * Sends one of the site's emails from the paradize.space mailbox through
@@ -19,6 +18,12 @@ import { emails, type EmailName } from "./generated";
  * scripts/build-emails.mjs. There is no parameter for hand-written HTML,
  * and ESLint keeps the mail SDK out of every other file, so nothing can
  * send around it.
+ *
+ * The one thing that varies per recipient is the unsubscribe link: every
+ * template has one, and the recipient's token (`unsubscribe_token` on
+ * their waitlist row) goes in place of its marker. Only a UUID is
+ * accepted, so nothing but those characters can reach the email. Never
+ * send to an address whose row has `unsubscribed_at` set.
  *
  * It goes out from a real mailbox, so a reply lands in that inbox, and
  * the API keeps a copy in its Sent folder. The mailbox's SPF and DKIM
@@ -40,22 +45,29 @@ export type SendResult =
 export async function sendEmail(
   to: string,
   name: EmailName,
+  unsubscribeToken: string,
 ): Promise<SendResult> {
+  if (!isUnsubscribeToken(unsubscribeToken)) {
+    return { status: "error", message: "Unsubscribe token is not a UUID." };
+  }
+
   const token = process.env.HOSTINGER_MAIL_TOKEN;
   const mailbox = process.env.HOSTINGER_MAIL_MAILBOX_ID;
   if (!token || !mailbox) return { status: "unconfigured" };
 
   const email = emails[name];
+  const personal = (body: string) =>
+    body.replaceAll(UNSUBSCRIBE_MARKER, unsubscribeToken);
 
   // The SDK's generated type marks every field required (cc, attachments,
   // the reply references); Hostinger's API reference makes all but a
   // recipient optional. Only the fields an email uses are sent.
   const request = {
     to: [to],
-    displayName: SITE_NAME,
+    displayName: email.from,
     subject: email.subject,
-    html: email.html,
-    text: email.text,
+    html: personal(email.html),
+    text: personal(email.text),
   } satisfies Partial<V1SendRequest>;
 
   try {

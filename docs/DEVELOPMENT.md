@@ -186,8 +186,10 @@ form → POST /api/waitlist
 | `lib/db/schema.ts`             | the table, in Drizzle; migrations are generated from it     |
 | `lib/db/client.ts`             | one postgres.js connection pool per instance                |
 | `lib/waitlist/signup.ts`       | interests and the address check, shared with the form       |
-| `lib/waitlist/adapter.ts`      | storing a signup; server only                               |
+| `lib/waitlist/adapter.ts`      | storing a signup and unsubscribing one; server only         |
 | `lib/emails/send.ts`           | sends a compiled email; see [Email](#email)                 |
+| `app/unsubscribe/page.tsx`     | where every email's unsubscribe link lands                  |
+| `app/api/unsubscribe/route.ts` | the page's button posts here                                |
 | `drizzle/`                     | generated migrations; never edit one that has been applied |
 
 `lib/waitlist/adapter.ts` is the only module that knows how a signup is stored.
@@ -225,6 +227,21 @@ route, so the reason a signup failed goes to the server log and nowhere else.
   got one: the send failed, the daily limit was reached, or mail was not
   configured yet. Vercel's function logs carry the reason, prefixed
   `[waitlist]`.
+- **Everyone on it can leave.** Each row has a random `unsubscribe_token`, and
+  every email links `https://paradize.space/unsubscribe?t=<token>`. Opening the
+  link only asks; the page's button posts to `/api/unsubscribe`, which sets
+  `unsubscribed_at`. Mail security scanners open every link in an email as it
+  arrives, so a link that unsubscribed by itself would unsubscribe people
+  unread. The token is the whole credential: knowing an address is not enough.
+- **Unsubscribed stays unsubscribed.** The row is kept with `unsubscribed_at`
+  set, so a later signup with the same address is a repeat and sends nothing.
+  Anyone can type an address into the form, so the form must not be a way to
+  put someone back on the list. Anything that emails the list must skip rows
+  where `unsubscribed_at` is set.
+- **No one-click button in Gmail.** Gmail's own Unsubscribe link next to the
+  sender needs `List-Unsubscribe` headers, and Hostinger's Mail API has no way
+  to set headers. The link in the email is the only way out, which is why the
+  build refuses an email without one.
 
 ### Connecting it
 
@@ -341,32 +358,52 @@ that is enforced, not just agreed:
   into `lib/emails/generated.ts`. It runs before `dev`, `build` and
   `typecheck`, and the file is git-ignored, so the compiled output is never
   stale and a hand edit to it never survives.
-- `sendEmail(to, name)` in `lib/emails/send.ts` takes a template **name**,
-  never content. There is no parameter for hand-written HTML.
+- `sendEmail(to, name, unsubscribeToken)` in `lib/emails/send.ts` takes a
+  template **name**, never content. There is no parameter for hand-written
+  HTML. The token is the recipient's `unsubscribe_token`; it replaces
+  `__UNSUBSCRIBE_TOKEN__` in the template's unsubscribe link, and anything
+  that is not a UUID is refused.
+- Every template must link
+  `https://paradize.space/unsubscribe?t=__UNSUBSCRIBE_TOKEN__` in both its
+  HTML and its text part, or the build fails. Everyone who gets an email is on
+  the mailing list.
 - ESLint (`eslint.config.mjs`) rejects importing `hostinger-mail-api-sdk`
   anywhere but `lib/emails/send.ts`, and `@maizzle/framework` anywhere but
   the build script and `maizzle.config.ts`, so nothing sends around it and
   Maizzle never ships in the app.
 
-**To add an email:** create `emails/<name>.vue`, preview it with
-`npm run emails:dev` (http://localhost:3333), then call
-`sendEmail(address, "<name>")`. The name is type-checked against the compiled
+**To add an email:** create `emails/<name>.vue` with the unsubscribe link,
+preview it with `npm run emails:dev` (http://localhost:3333), then call
+`sendEmail(row.email, "<name>", row.unsubscribeToken)` for each row where
+`unsubscribed_at` is empty. The name is type-checked against the compiled
 templates.
 
 **How the templates are written** (`emails/waitlist-confirmation.vue` is the
 reference):
 
-- The site's colours and type are declared as `@theme` tokens in the
-  template's `<style>`, with `@import "@maizzle/tailwindcss" source(none);`.
+- The site's type is declared as `@theme` tokens in the template's `<style>`,
+  with `@import "@maizzle/tailwindcss" source(none);`.
   `source(none)` matters: without it Tailwind scans the whole repository and
   the website's classes end up in the email. Use `Html`/`Head`/`Body` rather
   than `Layout`, whose head brings its own unscoped Tailwind and an Inter font.
 - Work Sans and Fragment Mono are linked with `<Font>`; clients that ignore web
   fonts fall back to the system stack in the tokens.
-- Everything is inlined and the `<style>` block is purged, so the compiled
-  email carries no classes. The waitlist email is about 6 KB, far under the
-  ~102 KB where Gmail clips, which is why `html.minify` is off: minifying also
-  strips the line breaks the text/plain part is built from.
+- Colours follow the reader's mail app. The light colour is the plain class
+  and is inlined; the dark one is a `dark:…!` class that stays behind in a
+  `prefers-color-scheme` media query, the only classes the compiled email
+  keeps. The `!` is needed to beat the inlined light colour. Apple Mail and
+  iOS Mail switch to it; Gmail and Outlook.com ignore it and darken the light
+  letter themselves.
+- Images an email shows live in `public/email/` and are written as paths,
+  `/email/mark.png`. `emails:dev` serves them from `public/`; the build puts
+  `https://paradize.space` in front, because a mail app loads them from the
+  live site, and fails if any `src` or `href` is still relative. So a new
+  image shows in the preview at once, but in a real inbox only once it is
+  deployed to production. Use PNG or JPEG: Gmail does not show SVG.
+- Everything else is inlined and purged from the `<style>` block. The waitlist
+  email is about 8 KB, far under the ~102 KB where Gmail clips, which is why
+  `html.minify` is off: minifying also strips the line breaks the text/plain
+  part is built from.
 - The preview line is a hidden `div` inside `<NotPlaintext>`, not Maizzle's
   `<Preheader>`, which teleports out of it and would lead the text/plain part.
 - Blank lines in `<Plaintext>` are `<br />&nbsp;<br />`; the converter
@@ -374,14 +411,15 @@ reference):
 
 ## Routes and metadata
 
-| route              | source                    | notes                                                        |
-| ------------------ | ------------------------- | ------------------------------------------------------------ |
-| `/`                | `app/page.tsx`            | the page                                                     |
-| `/opengraph-image` | `app/opengraph-image.tsx` | generated at build with `next/og`                            |
-| `/robots.txt`      | `app/robots.ts`           | allows everything except `/api/`                             |
-| `/sitemap.xml`     | `app/sitemap.ts`          | the three pages, each dated by its last real change          |
-| `/icon.svg`        | `app/icon.svg`            |                                                              |
-| 404                | `app/not-found.tsx`       | styled; Next's default is white and reads as a broken deploy |
+| route              | source                     | notes                                                        |
+| ------------------ | -------------------------- | ------------------------------------------------------------ |
+| `/`                | `app/page.tsx`             | the page                                                     |
+| `/opengraph-image` | `app/opengraph-image.tsx`  | generated at build with `next/og`                            |
+| `/robots.txt`      | `app/robots.ts`            | allows everything except `/api/`                             |
+| `/sitemap.xml`     | `app/sitemap.ts`           | the three pages, each dated by its last real change          |
+| `/icon.svg`        | `app/icon.svg`             |                                                              |
+| `/unsubscribe`     | `app/unsubscribe/page.tsx` | from every email's footer; `noindex`, not in the sitemap     |
+| 404                | `app/not-found.tsx`        | styled; Next's default is white and reads as a broken deploy |
 
 The share card is **black and type**, not the hero photograph. `ImageResponse`
 only emits PNG, and a photographic 1200×630 PNG came out at 1.1 MB regardless

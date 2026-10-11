@@ -12,6 +12,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uuid,
 } from "drizzle-orm/pg-core";
 
 // Relative, not `@/`: drizzle-kit loads this file outside Next's resolver.
@@ -41,6 +42,15 @@ export const waitlist = pgTable(
     confirmationSentAt: timestamp("confirmation_sent_at", {
       withTimezone: true,
     }),
+    // The secret in the unsubscribe link of every email to this address.
+    // Random, so knowing an address is not enough to unsubscribe it.
+    unsubscribeToken: uuid("unsubscribe_token")
+      .notNull()
+      .unique()
+      .defaultRandom(),
+    // Set when the address unsubscribes. The row is kept: it is what stops
+    // the form adding the address back, and what every send must check.
+    unsubscribedAt: timestamp("unsubscribed_at", { withTimezone: true }),
   },
   (t) => [
     // The route lowercases addresses before inserting. This keeps anything

@@ -13,7 +13,7 @@
     "emails:build": "node scripts/build-emails.mjs",
     "emails:dev": "maizzle serve",
     "predev": "npm run emails:build",
-    "prebuild": "npm run emails:build",
+    "prebuild": "npm run emails:build -- --strict",
     "pretypecheck": "npm run emails:build"
   },
   "dependencies": {

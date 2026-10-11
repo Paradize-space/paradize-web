@@ -161,7 +161,10 @@ export async function POST(request: Request) {
     // response, so the form never waits on it, and a failed send never
     // turns a stored signup into an error. `after` keeps the function
     // alive until it finishes; a plain unawaited promise would be cut off.
-    if (result.isNew) after(() => confirm(signup));
+    if (result.isNew) {
+      const { unsubscribeToken } = result;
+      after(() => confirm(signup, unsubscribeToken));
+    }
     return NextResponse.json({ status: "stored" }, { status: 201 });
   }
 
@@ -174,7 +177,7 @@ export async function POST(request: Request) {
   return refused(502);
 }
 
-async function confirm(signup: WaitlistSignup) {
+async function confirm(signup: WaitlistSignup, unsubscribeToken: string) {
   try {
     const day = new Date(Date.now() - 24 * 60 * 60 * 1000);
     if ((await countConfirmationsSince(day)) >= DAILY_EMAIL_CAP) {
@@ -186,7 +189,11 @@ async function confirm(signup: WaitlistSignup) {
     return;
   }
 
-  const sent = await sendEmail(signup.email, "waitlist-confirmation");
+  const sent = await sendEmail(
+    signup.email,
+    "waitlist-confirmation",
+    unsubscribeToken,
+  );
 
   if (sent.status === "error") {
     console.error("[waitlist] confirmation failed:", sent.message);
