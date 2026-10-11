@@ -9,3 +9,7 @@ npm-debug.log*
 .vercel
 *.tsbuildinfo
 next-env.d.ts
+
+# Compiled from emails/*.vue by `npm run emails:build`; never edited by hand.
+/lib/emails/generated.ts
+/.maizzle/

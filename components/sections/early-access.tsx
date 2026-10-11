@@ -8,7 +8,6 @@ import { photos } from "@/lib/photos";
 const facts = [
   { k: "What you get", v: "Occasional development updates." },
   { k: "What we store", v: "Your address and the streams you picked." },
-  { k: "Right now", v: "No store is connected, and the form says so." },
 ];
 
 export function EarlyAccess() {
