@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { Fragment_Mono, Work_Sans } from "next/font/google";
 
 import { SmoothScroll } from "@/components/chrome/smooth-scroll";
+import { WaitlistProvider } from "@/components/controls/waitlist";
+import { pages } from "@/lib/pages";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -29,11 +31,10 @@ const fragmentMono = Fragment_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Paradize — a home for people who build hardware",
-    template: "%s — Paradize",
+    default: pages.home.title,
+    template: `%s — ${SITE_NAME}`,
   },
-  description:
-    "Document hardware projects, version the hardware and software together, check what you already have, and source what you still need. Paradize is in development.",
+  description: pages.home.description,
   applicationName: SITE_NAME,
   keywords: [
     "hardware projects",
@@ -47,15 +48,13 @@ export const metadata: Metadata = {
     type: "website",
     url: "/",
     siteName: SITE_NAME,
-    title: "Paradize — a home for people who build hardware",
-    description:
-      "Document hardware projects, version the hardware and software together, check what you already have, and source what you still need.",
+    title: pages.home.title,
+    description: pages.home.share,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Paradize — a home for people who build hardware",
-    description:
-      "Document hardware projects, version the hardware and software together, check what you already have, and source what you still need.",
+    title: pages.home.title,
+    description: pages.home.share,
   },
 };
 
@@ -71,7 +70,7 @@ export default function RootLayout({
     <html lang="en" className={`${workSans.variable} ${fragmentMono.variable}`}>
       <body className="antialiased">
         <SmoothScroll />
-        {children}
+        <WaitlistProvider>{children}</WaitlistProvider>
       </body>
     </html>
   );

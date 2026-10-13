@@ -1,41 +1,26 @@
 import type { Metadata } from "next";
 
-import { DeepSky } from "@/components/chrome/deep-sky";
 import { SiteFooter } from "@/components/chrome/site-footer";
 import { SiteHeader } from "@/components/chrome/site-header";
-import { StandingCta } from "@/components/chrome/standing-cta";
-import { Words } from "@/components/chrome/words";
+import { ActionArrow } from "@/components/controls/action-link";
+import { WaitlistButton } from "@/components/controls/waitlist";
+import { WaitlistCard } from "@/components/controls/waitlist-card";
+import { Scope } from "@/components/research/scope";
+import { pageMetadata, pages } from "@/lib/pages";
+import { PageData } from "@/components/chrome/structured-data";
 
-export const metadata: Metadata = {
-  title: "Research",
-  description:
-    "A research stream for work by the team inside Paradize. Nothing published yet.",
-  alternates: { canonical: "/research" },
-  openGraph: {
-    type: "website",
-    url: "/research",
-    siteName: "Paradize",
-    title: "Research — Paradize",
-    description:
-      "A research stream for work by the team inside Paradize. Nothing published yet.",
-  },
-};
+export const metadata: Metadata = pageMetadata(pages.research);
 
 /**
  * Research.
  *
- * One line and a status, on a sky. That is the whole page.
+ * Nothing from the lab is public yet, and the page says exactly that.
+ * What it has instead of content is an instrument: an oscilloscope with
+ * four figures to tune and switch between. It is there to be played
+ * with, and to say that something is on the bench without saying what.
  *
- * It had a good deal more on it — an empty-state readout, a set of
- * boundary statements about what the stream is and is not, a waitlist
- * — and all of it was true, but it was several screens of copy in
- * front of a stream that has published nothing. A page that says one
- * honest thing is a better answer to having nothing to show than four
- * sections explaining the nothing.
- *
- * The standing waitlist card stays, because it is site chrome rather
- * than research content, and it is the only route off this page for
- * anyone who wants to be told when the stream has something.
+ * The one action is to be told when the first piece is out: the
+ * waitlist, with Research already ticked.
  */
 export default function ResearchPage() {
   return (
@@ -47,43 +32,48 @@ export default function ResearchPage() {
         Skip to content
       </a>
 
+      <PageData page={pages.research} />
       <SiteHeader />
-      <StandingCta />
+      <WaitlistCard />
 
-      {/* One sky, fixed, behind the whole document. */}
-      <DeepSky />
-
-      {/* The wells darken the scene locally where the words are. The
-          greys themselves are the site's own: the whole scene is
-          graded down far enough that `text-mute` holds 5.97:1 on the
-          wall the heading sits on, against 6.05:1 on plain black
-          elsewhere. Lifting them for this page made its type visibly
-          lighter than every other page's, which was its own kind of
-          not matching. */}
-      <div>
-        <main
-          id="main"
-          className="relative flex min-h-svh flex-col justify-end px-6 pb-20 sm:px-10 lg:justify-center lg:pb-0"
+      <main id="main">
+        {/* Wide, the words sit over the screen, low on the left. On a
+            phone the screen is its own block and the words follow it. */}
+        <section
+          data-quiet
+          className="relative isolate overflow-hidden lg:h-svh lg:min-h-[40rem]"
         >
-          <div className="text-well mx-auto w-full max-w-page py-32 lg:max-w-[46rem] lg:mr-auto lg:ml-[6vw]">
-            {/* No index-and-ruler strip here. It is a measuring edge,
-                and it earns its place on pages that have sections to
-                measure — this one has a sentence. */}
-            <Words as="h1" className="text-display max-w-[14ch]">
-              {"Work by the team inside Paradize."}
-            </Words>
+          <Scope className="h-[68svh] min-h-[30rem] lg:absolute! lg:inset-0 lg:-z-10 lg:h-auto lg:min-h-0" />
 
-            <p className="mono text-mute mt-12 flex items-center gap-3">
-              <span aria-hidden="true" className="bg-line-2 block h-px w-10" />
-              Coming soon
-            </p>
+          <div className="pointer-events-none flex flex-col justify-end px-4 pt-8 pb-16 sm:px-7 lg:h-full lg:pt-0">
+            <div className="max-w-[36rem]">
+              <p className="mono text-dim">03 — Research</p>
+              <h1 className="text-display mt-6">Under test.</h1>
+              <p className="text-lead text-mute mt-6 max-w-[38ch]">
+                Paradize is also a research lab. What the team inside it is
+                working on stays on the bench until it is ready to be read. The
+                first piece to be published will appear on this page.
+              </p>
+              <div className="pointer-events-auto mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">
+                <WaitlistButton
+                  variant="action"
+                  size="action"
+                  interests={["research"]}
+                  className="group/action min-w-[15.625rem] justify-start"
+                >
+                  <ActionArrow />
+                  Tell me when it is out
+                </WaitlistButton>
+                <p className="mono text-dim hidden lg:block">
+                  Move to tune · click to change the figure
+                </p>
+              </div>
+            </div>
           </div>
-        </main>
+        </section>
+      </main>
 
-        <div className="footer-well">
-          <SiteFooter />
-        </div>
-      </div>
+      <SiteFooter />
     </>
   );
 }

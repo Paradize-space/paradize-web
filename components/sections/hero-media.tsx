@@ -64,7 +64,19 @@ export function HeroMedia() {
     if (video.readyState >= 3) void start();
     else video.addEventListener("canplay", start, { once: true });
 
-    return () => video.removeEventListener("canplay", start);
+    // Decoding a looping video nobody can see is wasted work, and it
+    // competes with the film below for the GPU. Pause it whenever the
+    // title screen has scrolled away; resume when it comes back.
+    const io = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) void video.play().catch(() => {});
+      else video.pause();
+    });
+    io.observe(video);
+
+    return () => {
+      video.removeEventListener("canplay", start);
+      io.disconnect();
+    };
   }, [wanted]);
 
   if (!wanted) return null;

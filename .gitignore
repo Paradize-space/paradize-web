@@ -13,3 +13,6 @@ next-env.d.ts
 # Compiled from emails/*.vue by `npm run emails:build`; never edited by hand.
 /lib/emails/generated.ts
 /.maizzle/
+
+# Render scratch for tools/part-shots
+/tools/part-shots/.out

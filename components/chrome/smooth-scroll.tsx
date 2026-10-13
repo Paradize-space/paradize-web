@@ -3,6 +3,9 @@
 import Lenis from "lenis";
 import { useEffect } from "react";
 
+/** Room left above a section for the fixed header, in pixels. */
+const HEADER = 72;
+
 /**
  * Smooth scrolling, from the `lenis` package.
  *
@@ -13,33 +16,40 @@ import { useEffect } from "react";
  *
  * It stays off entirely when the visitor has asked for reduced motion —
  * hijacking the scroll is exactly the kind of thing that setting means.
+ * Same-page anchor links are handled either way.
  */
 export function SmoothScroll() {
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-    const lenis = new Lenis({
-      duration: 1.1,
-      // Lenis only handles the wheel; touch keeps the native behaviour,
-      // which is smoother than anything JS can do on a phone.
-      smoothWheel: true,
-      touchMultiplier: 1.6,
-    });
+    const lenis = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? null
+      : new Lenis({
+          duration: 1.1,
+          // Lenis only handles the wheel; touch keeps the native
+          // behaviour, which is smoother than anything JS can do on a
+          // phone.
+          smoothWheel: true,
+          touchMultiplier: 1.6,
+        });
 
     let frame = 0;
-    const raf = (time: number) => {
-      lenis.raf(time);
+    if (lenis) {
+      const raf = (time: number) => {
+        lenis.raf(time);
+        frame = requestAnimationFrame(raf);
+      };
       frame = requestAnimationFrame(raf);
-    };
-    frame = requestAnimationFrame(raf);
+    }
 
-    // In-page anchors have to go through Lenis or they fight it.
+    // In-page anchors go through Lenis, or they fight it.
     //
-    // Matching on `href^="#"` alone is not enough now that marketplace
-    // and research are separate pages: the nav writes its landing-page
-    // links absolutely, as `/#platform`, so they have to be recognised
-    // as same-page jumps whenever we are already on that page. Links to
-    // another page keep the browser's normal navigation.
+    // The nav writes its landing-page links absolutely, as `/#top`, so
+    // they work from every page; here they are recognised as same-page
+    // jumps whenever we are already on that page. Links to another page
+    // keep the normal navigation.
+    //
+    // The listener captures, so it runs before Next's Link: left to
+    // Next, a link to the address you are already on (Platform, clicked
+    // a second time) navigates nowhere and does not move.
     const onClick = (event: MouseEvent) => {
       if (event.defaultPrevented || event.button !== 0) return;
       if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
@@ -59,17 +69,23 @@ export function SmoothScroll() {
       if (!target) return;
 
       event.preventDefault();
-      lenis.scrollTo(target, { offset: -72 });
+      if (lenis) lenis.scrollTo(target, { offset: -HEADER });
+      else
+        window.scrollTo({
+          top: target.getBoundingClientRect().top + window.scrollY - HEADER,
+        });
       // Keep the address bar honest without triggering a jump.
-      history.pushState(null, "", url.hash);
+      if (url.hash === window.location.hash)
+        history.replaceState(null, "", url.hash);
+      else history.pushState(null, "", url.hash);
     };
 
-    document.addEventListener("click", onClick);
+    document.addEventListener("click", onClick, true);
 
     return () => {
-      document.removeEventListener("click", onClick);
+      document.removeEventListener("click", onClick, true);
       cancelAnimationFrame(frame);
-      lenis.destroy();
+      lenis?.destroy();
     };
   }, []);
 

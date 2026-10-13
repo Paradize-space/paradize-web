@@ -24,7 +24,7 @@ export function Reveal({
   className,
 }: {
   children: ReactNode;
-  as?: ElementType;
+  as?: ElementType<{ className?: string; children?: ReactNode }>;
   className?: string;
 }) {
   return <Tag className={cn("reveal", className)}>{children}</Tag>;

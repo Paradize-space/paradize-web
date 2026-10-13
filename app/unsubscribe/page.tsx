@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { SiteFooter } from "@/components/chrome/site-footer";
 import { SiteHeader } from "@/components/chrome/site-header";
+import { ActionArrow, ActionLink } from "@/components/controls/action-link";
 import { Button } from "@/components/ui/button";
 import { isUnsubscribeToken } from "@/lib/emails/unsubscribe-token";
 
@@ -67,7 +67,7 @@ export default async function UnsubscribePage({
     <>
       <SiteHeader />
 
-      <main id="main" className="mx-auto max-w-page px-4 sm:px-6">
+      <main id="main" className="mx-auto max-w-page px-4 sm:px-7">
         <div className="pt-28 pb-24 sm:pt-36 sm:pb-32">
           <div className="flex items-start gap-4">
             <p className="mono text-dim shrink-0 -translate-y-[0.35em]">
@@ -88,25 +88,16 @@ export default async function UnsubscribePage({
                 >
                   <Button
                     type="submit"
-                    variant="outline"
-                    size="sm"
-                    className="mono h-9 gap-2 px-4"
+                    variant="action"
+                    size="action"
+                    className="group/action justify-start"
                   >
-                    <span aria-hidden="true">&#8627;</span>
+                    <ActionArrow />
                     Unsubscribe
                   </Button>
                 </form>
               ) : (
-                <Button
-                  render={<Link href="/" />}
-                  nativeButton={false}
-                  variant="outline"
-                  size="sm"
-                  className="mono h-9 gap-2 px-4"
-                >
-                  <span aria-hidden="true">&#8627;</span>
-                  Back to the start
-                </Button>
+                <ActionLink href="/">Back to the start</ActionLink>
               )}
             </div>
           </div>

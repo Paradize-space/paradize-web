@@ -1,0 +1,388 @@
+/* The film: a keypad under a lamp on a dark bench, between the
+ * header and the chapter bar.
+ *
+ * It stays on the page's own ground and ink. The palette is kept as
+ * custom properties on the track, drawn from the site's tokens, so
+ * every rule below reads from them; the one orange marks what you are
+ * missing, the one green what is new.
+ */
+
+.track {
+  --ground: var(--color-bg, #010101);
+  --ink: var(--color-fg, #f1f1f1);
+  --ink-2: #b4b2ad;
+  --ink-3: var(--color-mute, #8a8a8a);
+  --rule: var(--color-line-2, #2f2f33);
+  --surface: color-mix(in oklab, var(--ground) 82%, #2a2722);
+  --signal: #f05a1e;
+  --ok: var(--color-ok, #6ee07a);
+  --bar-top: 6rem;
+  --bar-bottom: 4.25rem;
+  position: relative;
+  background: var(--ground);
+}
+
+.stage {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+  background: var(--ground);
+  color: var(--ink);
+}
+
+/* The picture, between the header and the chapter bar. The lamp's
+   light is drawn on the table in the scene; its edges here are faded
+   into the ground so the frame never shows a line. */
+.frame {
+  position: absolute;
+  inset: var(--bar-top) 0 var(--bar-bottom) 0;
+  overflow: hidden;
+}
+.frame::before,
+.frame::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  height: 3rem;
+  z-index: 1;
+  pointer-events: none;
+}
+.frame::before {
+  top: 0;
+  background: linear-gradient(var(--ground), transparent);
+}
+.frame::after {
+  bottom: 0;
+  background: linear-gradient(transparent, var(--ground));
+}
+
+.canvas {
+  position: absolute !important;
+  inset: 0;
+}
+
+/* The lamp coming up: black over everything, lifted on the way in. */
+.dusk {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: var(--ground);
+  pointer-events: none;
+}
+
+/* ---- Copy ------------------------------------------------------------ */
+
+.copy {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.panel {
+  position: absolute;
+  left: 1.75rem;
+  top: 50%;
+  width: min(29rem, 33vw);
+  translate: 0 -50%;
+}
+
+.kicker {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.title {
+  margin-top: 0.9rem;
+  font-size: clamp(1.9rem, 3.1vw, 3.1rem);
+  line-height: 1.04;
+  letter-spacing: -0.036em;
+  text-wrap: balance;
+}
+
+.body {
+  margin-top: 1rem;
+  font-size: 1rem;
+  line-height: 1.55;
+  letter-spacing: -0.01em;
+  color: var(--ink-2);
+  max-width: 38ch;
+}
+
+/* ---- Product cards ----------------------------------------------------- */
+
+.card {
+  margin-top: 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 0.85rem 1rem 0.9rem;
+}
+.cardHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+.cardTag {
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.cardLabel {
+  margin-top: 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.rows li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.42rem 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.875rem;
+}
+.rows li:last-child {
+  border-bottom: 0;
+}
+.rows li > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+.mono {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.01em;
+}
+.dim {
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.cardFoot {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  color: var(--ink-2);
+}
+.add,
+.change {
+  display: inline-block;
+  width: 0.9rem;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+.add {
+  color: var(--ok);
+}
+.change {
+  color: var(--ink-3);
+}
+.dotOk,
+.dotMissing {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  flex: none;
+}
+.dotOk {
+  background: var(--ok);
+}
+.dotMissing {
+  border: 1.5px solid var(--signal);
+}
+.missing {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--signal);
+}
+.kitLine {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  color: var(--signal);
+}
+.note {
+  margin-top: 0.45rem;
+  font-size: 0.75rem;
+  color: var(--ink-3);
+}
+
+.progress {
+  margin-top: 0.75rem;
+  height: 2px;
+  background: var(--rule);
+  overflow: hidden;
+}
+.progress > span {
+  display: block;
+  height: 100%;
+  background: var(--signal);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+.steps {
+  margin-top: 0.45rem;
+}
+.steps li {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.36rem 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+  transition: color 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.tick {
+  position: relative;
+  width: 0.72rem;
+  height: 0.72rem;
+  border: 1px solid var(--ink-3);
+  flex: none;
+}
+.tick::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  background: var(--ink);
+  transform: scale(0);
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.steps li[data-done="1"] {
+  color: var(--ink);
+}
+.steps li[data-done="1"] .tick::after {
+  transform: scale(1);
+}
+
+/* ---- The bars ------------------------------------------------------------ */
+
+.chapters {
+  position: absolute;
+  left: 1.75rem;
+  bottom: 0;
+  height: var(--bar-bottom);
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.chapters li {
+  display: flex;
+  gap: 0.5rem;
+  opacity: calc(0.42 + var(--on, 0) * 0.58);
+  transition: opacity 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.chapters li span {
+  opacity: 0.6;
+}
+
+.sample {
+  position: absolute;
+  right: 1.75rem;
+  bottom: 0;
+  height: var(--bar-bottom);
+  display: flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-dim, #787878);
+}
+
+/* ---- Narrow screens: the object on top, the words beneath ---------------- */
+
+@media (max-width: 63.99rem) {
+  .track {
+    --bar-bottom: 3.25rem;
+  }
+  .panel {
+    left: 1rem;
+    right: 1rem;
+    top: auto;
+    bottom: 0.75rem;
+    width: auto;
+    translate: none;
+    padding-top: 2.5rem;
+    background: linear-gradient(to bottom, transparent, var(--ground) 2.5rem);
+  }
+  .title {
+    margin-top: 0.5rem;
+    font-size: 1.55rem;
+  }
+  .body {
+    margin-top: 0.6rem;
+    font-size: 0.9375rem;
+  }
+  .card {
+    margin-top: 0.9rem;
+  }
+  /* On a phone the card keeps its first rows only. */
+  .rows li:nth-child(n + 4),
+  .cardLabel,
+  .note {
+    display: none;
+  }
+  .steps {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 0.9rem;
+  }
+  .steps li {
+    font-size: 0.75rem;
+  }
+  .chapters {
+    display: none;
+  }
+}
+
+/* Small phones: the copy runs in full, a step smaller, and the
+   sentence that only points at the sample steps aside (the bar along
+   the bottom already says it is a sample). */
+@media (max-width: 30rem) {
+  .body {
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+  .aside {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .steps li,
+  .tick::after,
+  .chapters li {
+    transition: none;
+  }
+}

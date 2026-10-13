@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -17,6 +17,7 @@ import {
   waitlistInterests,
 } from "@/lib/waitlist/signup";
 import type { WaitlistInterest } from "@/lib/waitlist/signup";
+import { cn } from "@/lib/utils";
 
 /**
  * The waitlist form.
@@ -39,9 +40,32 @@ type State =
   | { kind: "invalid"; message: string }
   | { kind: "error" };
 
-export function WaitlistForm() {
+/**
+ * The same form is used in two places: at the foot of a page, framed as
+ * a faceplate, and inside the waitlist panel, where the panel is the
+ * frame. Ids are generated per instance so both can be on one page.
+ */
+export function WaitlistForm({
+  framed = true,
+  initialInterests = [],
+}: {
+  framed?: boolean;
+  /** Ticked when the form opens, e.g. Research from the research page. */
+  initialInterests?: WaitlistInterest[];
+}) {
+  const uid = useId();
+  const ids = {
+    email: `${uid}-email`,
+    error: `${uid}-email-error`,
+    hint: `${uid}-email-hint`,
+    trap: `${uid}-website`,
+  };
+  const frame = framed
+    ? "screws border-line-2 bg-bg/90 border backdrop-blur-[2px]"
+    : "";
   const [email, setEmail] = useState("");
-  const [interests, setInterests] = useState<WaitlistInterest[]>([]);
+  const [interests, setInterests] =
+    useState<WaitlistInterest[]>(initialInterests);
   const [state, setState] = useState<State>({ kind: "idle" });
 
   // A ref as well as state: two rapid submits can both read `sending:
@@ -103,8 +127,8 @@ export function WaitlistForm() {
 
   if (state.kind === "stored") {
     return (
-      <div className="screws border-line-2 bg-bg/90 border px-6 py-8 backdrop-blur-[2px]">
-        <span className="screw-b" aria-hidden="true" />
+      <div className={cn(frame, framed && "px-6 py-8")}>
+        {framed ? <span className="screw-b" aria-hidden="true" /> : null}
         <p className="mono text-ok">Saved</p>
         <p className="text-sub mt-3">You are on the list.</p>
         <p className="text-small text-mute mt-3 max-w-[40ch]">
@@ -115,12 +139,8 @@ export function WaitlistForm() {
   }
 
   return (
-    <form
-      onSubmit={onSubmit}
-      noValidate
-      className="screws border-line-2 bg-bg/90 border backdrop-blur-[2px]"
-    >
-      <span className="screw-b" aria-hidden="true" />
+    <form onSubmit={onSubmit} noValidate className={frame}>
+      {framed ? <span className="screw-b" aria-hidden="true" /> : null}
 
       {/* Honeypot. Moved off-screen rather than display:none, which some
           bots know to skip; out of the tab order and hidden from screen
@@ -129,10 +149,10 @@ export function WaitlistForm() {
         aria-hidden="true"
         className="absolute -left-[10000px] h-px w-px overflow-hidden"
       >
-        <label htmlFor="wl-website">Leave this field empty</label>
+        <label htmlFor={ids.trap}>Leave this field empty</label>
         <input
           ref={trap}
-          id="wl-website"
+          id={ids.trap}
           name={HONEYPOT_FIELD}
           type="text"
           tabIndex={-1}
@@ -141,17 +161,19 @@ export function WaitlistForm() {
         />
       </div>
 
-      <div className="border-line border-b px-6 py-4">
-        <p className="mono text-dim">Request form</p>
-      </div>
+      {framed ? (
+        <div className="border-line border-b px-6 py-4">
+          <p className="mono text-dim">Request form</p>
+        </div>
+      ) : null}
 
-      <div className="flex flex-col gap-6 px-6 py-6">
+      <div className={cn("flex flex-col gap-6", framed && "px-6 py-6")}>
         <Field data-invalid={invalid || undefined}>
-          <FieldLabel htmlFor="wl-email" className="mono text-dim">
+          <FieldLabel htmlFor={ids.email} className="mono text-dim">
             Email address (required)
           </FieldLabel>
           <Input
-            id="wl-email"
+            id={ids.email}
             name="email"
             type="email"
             autoComplete="email"
@@ -159,7 +181,7 @@ export function WaitlistForm() {
             placeholder="name@example.com"
             value={email}
             aria-invalid={invalid || undefined}
-            aria-describedby={invalid ? "wl-email-error" : "wl-email-hint"}
+            aria-describedby={invalid ? ids.error : ids.hint}
             onChange={(e) => {
               setEmail(e.target.value);
               if (state.kind !== "idle") setState({ kind: "idle" });
@@ -167,11 +189,11 @@ export function WaitlistForm() {
             className="border-line-2 bg-bg h-11 rounded-none"
           />
           {invalid ? (
-            <FieldError id="wl-email-error" className="text-small">
+            <FieldError id={ids.error} className="text-small">
               {state.message}
             </FieldError>
           ) : (
-            <FieldDescription id="wl-email-hint" className="text-small">
+            <FieldDescription id={ids.hint} className="text-small">
               No account, no other details. One address, and what you want to
               hear about.
             </FieldDescription>
@@ -202,12 +224,12 @@ export function WaitlistForm() {
         <div className="flex flex-wrap items-center gap-4">
           <Button
             type="submit"
+            variant="action"
+            size="action"
             disabled={state.kind === "sending"}
-            className="mono h-11 px-6"
           >
             {state.kind === "sending" ? "Sending…" : "Join the waitlist"}
           </Button>
-          <p className="mono text-dim">Paradize is in development</p>
         </div>
 
         {/* The success case returns a different tree above, so this only

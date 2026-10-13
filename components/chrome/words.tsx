@@ -1,4 +1,4 @@
-import { Fragment, type ElementType } from "react";
+import { Fragment, type ElementType, type ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -29,7 +29,7 @@ export function Words({
   className,
 }: {
   children: string;
-  as?: ElementType;
+  as?: ElementType<{ className?: string; children?: ReactNode }>;
   className?: string;
 }) {
   const words = children.split(" ");

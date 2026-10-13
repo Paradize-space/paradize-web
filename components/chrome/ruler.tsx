@@ -34,7 +34,7 @@ export function Ruler({
       className={cn(
         // It is a divider, not a caption on the heading below it, so it
         // needs air on both sides to read as its own beat.
-        "mx-auto w-full max-w-page px-4 pt-6 pb-20 sm:px-6 sm:pb-28",
+        "mx-auto w-full max-w-page px-4 pt-6 pb-20 sm:px-7 sm:pb-28",
         className,
       )}
     >

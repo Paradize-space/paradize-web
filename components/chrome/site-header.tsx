@@ -1,23 +1,31 @@
 "use client";
 
+import { MenuIcon, XIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { Dot, NavPill } from "@/components/controls/nav-pill";
+import { WaitlistButton } from "@/components/controls/waitlist";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { navItems, type NavItem } from "@/lib/nav";
+import { navItems, utilityItems, type NavItem } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
 /**
- * The bar, laid out the way the reference lays it out: links hard left,
- * the mark dead centre, actions hard right — no container, no pill, and
- * every label in mono at 11px.
+ * The bar, as the reference builds it: no bar at all, just frosted
+ * pills floating over the page. The streams hard left, the name dead
+ * centre, status and the waitlist hard right.
+ *
+ * On phones it folds to three things, the way the reference's phone
+ * header does: the waitlist, the name, and a menu that opens to the
+ * whole screen.
  */
 export function Wordmark({ className }: { className?: string }) {
   return (
@@ -29,24 +37,29 @@ export function Wordmark({ className }: { className?: string }) {
   );
 }
 
-export function SiteHeader() {
-  const [open, setOpen] = useState(false);
-  const [current, setCurrent] = useState<string | null>(null);
-  const pathname = usePathname();
-  // Mark the section the middle of the viewport is currently in. Reading
-  // positions on scroll rather than using IntersectionObserver ratios,
-  // because these sections are wildly different heights and the tallest
-  // would otherwise win every comparison.
-  //
-  // Only the anchor items are tracked this way. The hrefs are absolute
-  // now that marketplace and research are their own pages, so the id has
-  // to be taken off the end — `querySelector("/#platform")` throws.
-  useEffect(() => {
-    const sections = navItems
-      .filter((item) => item.kind === "anchor")
-      .map((item) => document.getElementById(item.href.split("#")[1] ?? ""))
-      .filter((node): node is HTMLElement => Boolean(node));
+const allItems = [...navItems, ...utilityItems];
 
+/**
+ * Which item is current: a route when you are on it, an anchor when its
+ * section owns the middle of the screen. Positions are read on scroll
+ * rather than with IntersectionObserver ratios, because the sections
+ * are wildly different heights and the tallest would win every time.
+ */
+function useCurrent() {
+  const pathname = usePathname();
+  const [section, setSection] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Each section on the page, and the item it lights.
+    const sections = allItems
+      .filter((item) => item.kind === "anchor")
+      .flatMap((item) =>
+        (item.sections ?? [item.href.split("#")[1] ?? ""]).map((id) => ({
+          node: document.getElementById(id),
+          href: item.href,
+        })),
+      )
+      .filter((s): s is { node: HTMLElement; href: string } => Boolean(s.node));
     if (sections.length === 0) return;
 
     let frame = 0;
@@ -55,19 +68,16 @@ export function SiteHeader() {
       frame = requestAnimationFrame(() => {
         const middle = window.innerHeight / 2;
         let active: string | null = null;
-        for (const section of sections) {
-          const box = section.getBoundingClientRect();
-          if (box.top <= middle && box.bottom > middle)
-            active = `/#${section.id}`;
+        for (const { node, href } of sections) {
+          const box = node.getBoundingClientRect();
+          if (box.top <= middle && box.bottom > middle) active = href;
         }
-        setCurrent(active);
+        setSection(active);
       });
     };
-
     window.addEventListener("scroll", update, { passive: true });
     window.addEventListener("resize", update);
     update();
-
     return () => {
       window.removeEventListener("scroll", update);
       window.removeEventListener("resize", update);
@@ -75,119 +85,174 @@ export function SiteHeader() {
     };
   }, []);
 
-  // An anchor is current when its section owns the middle of the
-  // viewport; a route is current when you are simply on it.
-  const isCurrent = (item: NavItem) =>
-    item.kind === "route" ? pathname === item.href : current === item.href;
+  return (item: NavItem) =>
+    item.kind === "route" ? pathname === item.href : section === item.href;
+}
+
+export function SiteHeader() {
+  const [menu, setMenu] = useState(false);
+  const isCurrent = useCurrent();
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50">
-      {/* The bar itself stays transparent, as on the reference, but the
-          page scrolls underneath it — so a short fade carries it over
-          whatever happens to be passing. Without this, section labels
-          collide with the nav. */}
+    <header className="pointer-events-none fixed inset-x-0 top-0 z-50">
+      {/* A short fade under the pills, so page text passing beneath
+          them does not collide with their labels. */}
       <div
         aria-hidden="true"
-        className="from-bg/95 via-bg/70 pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b to-transparent"
+        className="from-bg/75 absolute inset-x-0 top-0 h-20 bg-gradient-to-b to-transparent"
       />
-      {/* How far through the document you are. One hairline, filled by
-          the root scroll timeline — no listener, no state. */}
-      <div
-        aria-hidden="true"
-        className="bg-line absolute inset-x-0 bottom-0 h-px"
-      >
+      {/* How far through the document you are: one hairline along the
+          top edge, filled by the root scroll timeline. */}
+      <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px">
         <div className="progress-bar bg-fg/45 h-full origin-left" />
       </div>
 
-      <div className="relative flex h-14 items-center justify-between px-4 sm:px-6">
-        <nav aria-label="Sections" className="hidden lg:block">
-          <ul className="flex items-center gap-5">
-            {navItems.map((item, i) => (
-              <li key={item.href} className="flex items-center gap-5">
-                {i > 0 ? (
-                  <span aria-hidden="true" className="text-dim text-[8px]">
-                    &#9679;
-                  </span>
-                ) : null}
-                <Link
-                  href={item.href}
-                  aria-current={isCurrent(item) ? "true" : undefined}
-                  className={cn(
-                    "mono transition-colors hover:text-fg",
-                    isCurrent(item) ? "text-fg" : "text-mute",
-                  )}
-                >
+      <div className="relative flex h-16 items-center justify-between px-4 sm:px-7">
+        {/* Wide: the streams. */}
+        <nav
+          aria-label="Streams"
+          className="pointer-events-auto hidden lg:block"
+        >
+          <ul className="flex items-center gap-1">
+            {navItems.map((item) => (
+              <li key={item.href}>
+                <NavPill href={item.href} current={isCurrent(item)}>
                   {item.label}
-                </Link>
+                </NavPill>
               </li>
             ))}
           </ul>
         </nav>
 
+        {/* Phones: the waitlist takes the left. */}
+        <WaitlistButton
+          variant="pill"
+          size="pill"
+          className="pointer-events-auto lg:hidden"
+        >
+          Waitlist
+          <Dot />
+        </WaitlistButton>
+
         <Link
           href="/"
           aria-label="Paradize, home"
-          className="lg:absolute lg:left-1/2 lg:-translate-x-1/2"
+          className="pointer-events-auto absolute left-1/2 -translate-x-1/2"
         >
           <Wordmark />
         </Link>
 
-        <div className="flex items-center gap-2">
-          <Button
-            render={<Link href="#early-access" />}
-            nativeButton={false}
-            size="sm"
-            className="mono hidden h-8 px-4 sm:inline-flex"
+        <div className="pointer-events-auto flex items-center gap-1">
+          {utilityItems.map((item) => (
+            <NavPill
+              key={item.href}
+              href={item.href}
+              current={isCurrent(item)}
+              className="hidden lg:inline-flex"
+            >
+              {item.label}
+            </NavPill>
+          ))}
+          <WaitlistButton
+            variant="pill"
+            size="pill"
+            className="hidden lg:inline-flex"
           >
             Join the waitlist
-          </Button>
+            <Dot on />
+          </WaitlistButton>
 
-          <Sheet open={open} onOpenChange={setOpen}>
+          <Sheet open={menu} onOpenChange={setMenu}>
             <SheetTrigger
               render={
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mono h-8 px-3 lg:hidden"
-                />
+                <Button variant="pill" size="pill" className="lg:hidden" />
               }
             >
               Menu
+              <MenuIcon aria-hidden="true" className="size-3.5" />
             </SheetTrigger>
-            <SheetContent
-              side="right"
-              className="border-line bg-bg text-fg w-full max-w-sm p-0"
-            >
-              <SheetTitle className="mono text-dim border-line border-b px-5 py-5">
-                Sections
-              </SheetTitle>
-              <nav aria-label="Sections" className="px-5 py-2">
-                <ul className="flex flex-col">
-                  {navItems.map((item) => (
-                    <li key={item.href} className="border-line border-b">
-                      <Link
-                        href={item.href}
-                        onClick={() => setOpen(false)}
-                        className="text-sub flex min-h-14 items-center"
-                      >
-                        {item.label}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-                <Button
-                  render={<Link href="#early-access" />}
-                  nativeButton={false}
-                  onClick={() => setOpen(false)}
-                  className="mono mt-6 h-11 w-full"
-                >
-                  Join the waitlist
-                </Button>
-              </nav>
-            </SheetContent>
+            <MobileMenu isCurrent={isCurrent} close={() => setMenu(false)} />
           </Sheet>
         </div>
       </div>
     </header>
+  );
+}
+
+/**
+ * The phone menu: the whole screen, the sections set large, the
+ * current one dimmed, and the waitlist as a bar at the foot.
+ */
+function MobileMenu({
+  isCurrent,
+  close,
+}: {
+  isCurrent: (item: NavItem) => boolean;
+  close: () => void;
+}) {
+  const pathname = usePathname();
+  const items: NavItem[] = [
+    { href: "/", label: "Home", kind: "route" },
+    ...allItems,
+  ];
+
+  return (
+    <SheetContent
+      side="top"
+      showCloseButton={false}
+      className="bg-bg text-fg gap-0 border-0 p-0 data-[side=top]:h-dvh"
+    >
+      <div className="relative flex h-16 shrink-0 items-center justify-end px-4">
+        <SheetTitle className="sr-only">Menu</SheetTitle>
+        <Link
+          href="/"
+          onClick={close}
+          aria-label="Paradize, home"
+          className="absolute left-1/2 -translate-x-1/2"
+        >
+          <Wordmark />
+        </Link>
+        <SheetClose render={<Button variant="pill" size="pill" />}>
+          Close
+          <XIcon aria-hidden="true" className="size-3.5" />
+        </SheetClose>
+      </div>
+
+      <nav aria-label="Sections" className="flex-1 px-4 pt-12">
+        <ul className="flex flex-col gap-1">
+          {items.map((item) => {
+            const here =
+              item.href === "/"
+                ? pathname === "/" && !items.slice(1).some(isCurrent)
+                : isCurrent(item);
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  onClick={close}
+                  aria-current={here ? "true" : undefined}
+                  className={cn(
+                    "text-display block leading-[1.05] transition-opacity duration-400",
+                    here ? "text-mute" : "text-fg hover:opacity-70",
+                  )}
+                >
+                  {item.label}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
+
+      <div className="px-4 pb-6">
+        <p className="mono text-dim mb-3">Paradize is pre-launch</p>
+        <WaitlistButton
+          variant="line"
+          size="card"
+          className="h-12"
+          onClick={close}
+        />
+      </div>
+    </SheetContent>
   );
 }

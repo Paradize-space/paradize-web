@@ -1,8 +1,7 @@
 import Image from "next/image";
-import Link from "next/link";
 
+import { ActionLink } from "@/components/controls/action-link";
 import { HeroMedia } from "@/components/sections/hero-media";
-import { Button } from "@/components/ui/button";
 import { heroVideo } from "@/lib/photos";
 
 /**
@@ -62,7 +61,7 @@ export function Hero() {
         </h1>
       </div>
 
-      <div className="relative z-10 flex flex-col gap-8 px-4 pb-6 sm:px-6 sm:pb-8">
+      <div className="relative z-10 flex flex-col gap-8 px-4 pb-6 sm:px-7 sm:pb-8 lg:pb-6">
         <div className="flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between">
           <p className="mono text-fg max-w-[26ch] leading-[1.7]">
             A home for hardware projects. Write one down once, and someone else
@@ -74,32 +73,18 @@ export function Hero() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-end justify-between gap-6">
-          <Button
-            render={<Link href="#route" />}
-            nativeButton={false}
-            variant="outline"
-            size="sm"
-            className="mono h-9 gap-2 px-4"
-          >
-            <span aria-hidden="true">&#8627;</span>
+        {/* The reference's corner, kept: the next step on the left as a
+            light bar, and on the right the waitlist card. The card is
+            the site-wide one, fixed to the corner (WaitlistCard), so
+            this row only holds its place; it is not repeated here. */}
+        <div className="flex items-end justify-between gap-6 pb-14 lg:pb-0">
+          <ActionLink href="#route" className="w-full sm:w-auto">
             See how it works
-          </Button>
-
-          {/* The reference's order card, doing our job: the one action. */}
-          <div className="screws bg-fg text-bg w-full max-w-xs px-5 py-4 sm:w-auto sm:min-w-[19rem]">
-            <span className="screw-b" aria-hidden="true" />
-            <p className="mono text-bg/70 text-center">
-              Paradize is pre-launch
-            </p>
-            <Button
-              render={<Link href="#early-access" />}
-              nativeButton={false}
-              className="mono bg-bg text-fg hover:bg-bg/85 mt-3 h-9 w-full"
-            >
-              Join the waitlist
-            </Button>
-          </div>
+          </ActionLink>
+          <div
+            aria-hidden="true"
+            className="hidden h-[8.125rem] w-[17.125rem] lg:block"
+          />
         </div>
       </div>
     </section>

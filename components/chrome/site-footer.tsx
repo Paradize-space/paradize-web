@@ -1,41 +1,20 @@
 import Link from "next/link";
 
 import { Wordmark } from "@/components/chrome/site-header";
-import { partCredits } from "@/lib/data/demo-market";
-import { navItems } from "@/lib/nav";
-import {
-  heroVideo,
-  photoCredits,
-  textureCredits,
-  unsplashProfile,
-} from "@/lib/photos";
+import { navItems, utilityItems } from "@/lib/nav";
+import { SITE_SOCIALS } from "@/lib/site";
 
 /**
- * The foot of the document.
- *
- * Closes on the name at monument scale, cropped by the bottom edge the
- * way the reference crops it at the top. The photo credits are real and
- * link out to the photographers — the Unsplash Licence does not require
- * it, but the pictures were taken by people.
+ * The foot of the document: the name and what Paradize is, the
+ * sections, and where to follow Paradize. Closes on the name at monument scale, cropped by the bottom
+ * edge the way the reference crops it at the top.
  */
 export function SiteFooter() {
-  // The parts marketplace preview carries its own photographs, so its
-  // photographers belong in the same list. Keyed by handle, so anyone
-  // appearing in both sets is credited once.
-  const uniqueCredits = [
-    ...new Map(
-      [...photoCredits, ...partCredits, ...textureCredits].map((p) => [
-        p.handle,
-        p,
-      ]),
-    ).values(),
-  ];
-
   return (
     <footer className="relative overflow-hidden">
-      <div className="mx-auto max-w-page px-4 sm:px-6">
+      <div className="mx-auto max-w-page px-4 sm:px-7">
         <div className="border-line grid gap-10 border-t py-14 lg:grid-cols-12 lg:gap-x-12">
-          <div className="lg:col-span-4">
+          <div className="lg:col-span-5">
             <Link href="/" className="inline-block">
               <Wordmark />
             </Link>
@@ -45,13 +24,14 @@ export function SiteFooter() {
             </p>
           </div>
 
-          <nav aria-label="Footer" className="lg:col-span-3 lg:col-start-6">
+          <nav aria-label="Footer" className="lg:col-span-3 lg:col-start-7">
             <p className="mono text-dim">Sections</p>
             <ul className="mt-4 flex flex-col gap-2.5">
               {[
                 ...navItems,
+                ...utilityItems,
                 {
-                  href: "#early-access",
+                  href: "/#early-access",
                   label: "Early access",
                   kind: "anchor" as const,
                 },
@@ -68,36 +48,27 @@ export function SiteFooter() {
             </ul>
           </nav>
 
-          <div className="lg:col-span-4 lg:col-start-9">
-            <p className="mono text-dim">Photography &amp; film</p>
-            <p className="text-small text-mute mt-4 max-w-[38ch]">
-              Stock images under the Unsplash Licence and one clip under the
-              Pexels Licence. They show other people&rsquo;s hardware. Paradize
-              has no product to photograph yet.
-            </p>
-            <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-2">
-              {uniqueCredits.map((credit) => (
-                <li key={credit.handle}>
+          <div className="lg:col-span-3 lg:col-start-10">
+            <p className="mono text-dim">Follow</p>
+            <ul className="mt-4 flex flex-col gap-2.5">
+              {SITE_SOCIALS.map((social) => (
+                <li key={social.name}>
                   <a
-                    href={unsplashProfile(credit.handle)}
+                    href={social.href}
                     target="_blank"
-                    rel="noreferrer noopener"
-                    className="mono text-dim hover:text-fg transition-colors"
+                    rel="noopener"
+                    className="text-small text-mute hover:text-fg group inline-flex items-center gap-2 transition-colors"
                   >
-                    {credit.by}
+                    {social.name}
+                    <span
+                      aria-hidden="true"
+                      className="text-dim transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                    >
+                      &#8599;
+                    </span>
                   </a>
                 </li>
               ))}
-              <li>
-                <a
-                  href={heroVideo.href}
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="mono text-dim hover:text-fg transition-colors"
-                >
-                  {heroVideo.by}
-                </a>
-              </li>
             </ul>
           </div>
         </div>

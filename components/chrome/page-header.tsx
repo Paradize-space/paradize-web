@@ -9,8 +9,10 @@ import type { Photo } from "@/lib/photos";
  * Deliberately not a second monument screen: the name at 21vw is the
  * front door and repeating it on every page would flatten it. This is
  * the same language at a lower volume — mono index, display heading,
- * one lede, one full-bleed photograph beneath — so /marketplace reads
- * as another sheet of the same document rather than another website.
+ * one lede, and (optionally) one full-bleed photograph beneath — so
+ * /marketplace reads as another sheet of the same document rather than
+ * another website. A page whose first section is its own picture
+ * leaves the photograph out.
  */
 export function PageHeader({
   index,
@@ -23,11 +25,11 @@ export function PageHeader({
   label: string;
   heading: string;
   lede: string;
-  photo: Photo;
+  photo?: Photo;
 }) {
   return (
     <header className="relative">
-      <div className="mx-auto max-w-page px-4 pt-28 pb-14 sm:px-6 sm:pt-36 sm:pb-20">
+      <div className="mx-auto max-w-page px-4 pt-28 pb-14 sm:px-7 sm:pt-36 sm:pb-20">
         <div className="flex items-start gap-4">
           <p className="mono text-dim tnum shrink-0 -translate-y-[0.35em]">
             {index}
@@ -48,17 +50,19 @@ export function PageHeader({
         </div>
       </div>
 
-      <div className="relative aspect-21/9 w-full overflow-hidden sm:aspect-3/1">
-        <Image
-          src={photo.src}
-          alt={photo.alt}
-          fill
-          sizes="100vw"
-          loading="eager"
-          fetchPriority="high"
-          className="photo parallax object-cover"
-        />
-      </div>
+      {photo ? (
+        <div className="relative aspect-21/9 w-full overflow-hidden sm:aspect-3/1">
+          <Image
+            src={photo.src}
+            alt={photo.alt}
+            fill
+            sizes="100vw"
+            loading="eager"
+            fetchPriority="high"
+            className="photo parallax object-cover"
+          />
+        </div>
+      ) : null}
     </header>
   );
 }

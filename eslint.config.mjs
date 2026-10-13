@@ -4,7 +4,12 @@ import typescript from "eslint-config-next/typescript";
 const eslintConfig = [
   ...coreWebVitals,
   ...typescript,
-  { ignores: [".next/**", "node_modules/**", "out/**"] },
+  { ignores: [".next/**", "node_modules/**", "out/**", "tools/**/.out/**"] },
+  {
+    // Offline render tools run under Node as CommonJS scripts.
+    files: ["tools/**/*.cjs"],
+    rules: { "@typescript-eslint/no-require-imports": "off" },
+  },
   {
     // Every email is a Maizzle template in emails/, sent with sendEmail()
     // from lib/emails/send.ts. The mail SDK is allowed in that one file,

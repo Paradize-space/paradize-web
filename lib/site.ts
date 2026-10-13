@@ -27,3 +27,22 @@ export const SITE_NAME = "Paradize";
  * site-name guidance shows it.
  */
 export const SITE_ALTERNATE_NAMES = ["Paradize Space", "paradize.space"];
+
+/**
+ * Paradize's own accounts, and nothing else. Each was checked as the
+ * company's before it went in: the X account is the one the waitlist
+ * email links to, and the LinkedIn page is administered by the team.
+ * Used by the footer and by `sameAs` in the structured data.
+ */
+export const SITE_SOCIALS = [
+  {
+    name: "X",
+    handle: "@paradize_space",
+    href: "https://x.com/paradize_space",
+  },
+  {
+    name: "LinkedIn",
+    handle: "Paradize",
+    href: "https://www.linkedin.com/company/paradize-space",
+  },
+];

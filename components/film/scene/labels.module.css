@@ -1,0 +1,30 @@
+/* Part labels over a 3D canvas, shared by the film and the marketplace
+ * preview. Placed by the studio's label projector; the colours come from
+ * custom properties so either page can tune them. */
+
+.label,
+.labelRight,
+.kitTag {
+  display: inline-block;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--label-ink, #b4b2ad);
+}
+.label {
+  transform: translate(-100%, -50%);
+  padding-right: 0.7rem;
+  border-right: 1px solid var(--label-rule, #8a8a8a);
+}
+.labelRight,
+.kitTag {
+  transform: translate(0, -50%);
+  padding-left: 0.7rem;
+  border-left: 1px solid var(--label-rule, #8a8a8a);
+}
+.kitTag {
+  color: var(--label-signal, #f05a1e);
+  border-left-color: var(--label-signal, #f05a1e);
+}

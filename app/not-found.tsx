@@ -4,7 +4,7 @@ import Link from "next/link";
 
 import { SiteFooter } from "@/components/chrome/site-footer";
 import { SiteHeader } from "@/components/chrome/site-header";
-import { Button } from "@/components/ui/button";
+import { ActionLink } from "@/components/controls/action-link";
 import { navItems } from "@/lib/nav";
 import { photos } from "@/lib/photos";
 
@@ -48,7 +48,7 @@ export default function NotFound() {
           </p>
         </div>
 
-        <div className="relative z-10 flex flex-col gap-8 px-4 pb-10 sm:px-6">
+        <div className="relative z-10 flex flex-col gap-8 px-4 pb-10 sm:px-7">
           <div className="flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h1 className="text-sub">This page does not exist.</h1>
@@ -75,16 +75,7 @@ export default function NotFound() {
           </div>
 
           <div>
-            <Button
-              render={<Link href="/" />}
-              nativeButton={false}
-              variant="outline"
-              size="sm"
-              className="mono h-9 gap-2 px-4"
-            >
-              <span aria-hidden="true">&#8627;</span>
-              Back to the start
-            </Button>
+            <ActionLink href="/">Back to the start</ActionLink>
           </div>
         </div>
       </main>

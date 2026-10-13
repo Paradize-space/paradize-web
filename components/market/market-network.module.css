@@ -1,0 +1,357 @@
+/* The marketplace screen: the network fills it, the words sit low on
+ * the left over a fade, the key sits low on the right, and the bar runs
+ * along the foot. On phones the network takes the top of the screen
+ * and the rest follows underneath. */
+
+.screen {
+  --ink: #010101;
+  --ink-mute: color-mix(in oklab, #010101 58%, #f1f1f1);
+  --paper: #f1f1f1;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  height: 100svh;
+  min-height: 42rem;
+  overflow: hidden;
+  background: radial-gradient(
+    60% 70% at 62% 48%,
+    #0e0e0d 0%,
+    var(--color-bg) 72%
+  );
+}
+
+.stage {
+  position: absolute;
+  inset: 0;
+}
+.canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: pan-y;
+}
+
+/* A fade behind the words, so the network passes under them. */
+.screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      55% 60% at 12% 78%,
+      rgb(1 1 1 / 0.92) 0%,
+      rgb(1 1 1 / 0.6) 45%,
+      rgb(1 1 1 / 0) 100%
+    ),
+    linear-gradient(to top, rgb(1 1 1 / 0.9) 0, rgb(1 1 1 / 0) 7rem);
+}
+
+/* ---- Words ------------------------------------------------------------ */
+
+.words {
+  position: absolute;
+  z-index: 2;
+  left: 1.75rem;
+  bottom: 6.5rem;
+  width: min(30rem, 38vw);
+}
+
+/* ---- Names pinned to nodes --------------------------------------------- */
+
+.pin,
+.rider,
+.tip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  pointer-events: none;
+  will-change: transform;
+}
+.pin > span {
+  position: absolute;
+  left: 0.75rem;
+  bottom: 0.4rem;
+  display: grid;
+  gap: 0.1rem;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  color: var(--color-fg);
+  opacity: 0.45;
+  transition: opacity 0.5s var(--ease);
+}
+.pin em {
+  font-style: normal;
+  font-size: 0.5625rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-mute);
+}
+.pin[data-on="true"] > span {
+  opacity: 1;
+}
+/* A store's name sits under it, leaving the space above for its part. */
+.pin[data-kind="store"] > span {
+  bottom: auto;
+  top: 0.45rem;
+}
+.pin[data-side="left"] > span {
+  left: auto;
+  right: 0.75rem;
+  text-align: right;
+}
+
+/* A store's part, held up over the light carrying it. */
+.rider {
+  opacity: 0;
+}
+.rider > span {
+  position: absolute;
+  left: -2rem;
+  bottom: 1.1rem;
+  width: 4rem;
+  height: 3rem;
+  border-radius: 3px;
+  background: var(--paper);
+  overflow: hidden;
+  box-shadow: 0 10px 30px -8px rgb(0 0 0 / 0.7);
+}
+.rider::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0.2rem;
+  width: 1px;
+  height: 0.9rem;
+  background: rgb(241 241 241 / 0.6);
+}
+.rider img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  scale: 1.35;
+}
+
+/* What a hovered node is. */
+.tip {
+  padding: 0;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-fg);
+  opacity: 0;
+  translate: 0.8rem -1.9rem;
+  transition: opacity 0.25s var(--ease);
+}
+.tip[data-on="true"] {
+  opacity: 1;
+}
+
+/* ---- The bar ---------------------------------------------------------------- */
+
+.bar {
+  position: absolute;
+  z-index: 3;
+  left: 1.75rem;
+  right: 1.75rem;
+  bottom: 0;
+  height: 4.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.pause {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  flex: none;
+  border-radius: 4px;
+  background: color-mix(in oklab, var(--color-fg) 10%, transparent);
+  color: var(--color-fg);
+  cursor: pointer;
+  transition: background-color 0.3s var(--ease);
+}
+.pause:hover {
+  background: color-mix(in oklab, var(--color-fg) 18%, transparent);
+}
+.steps {
+  display: flex;
+  flex: none;
+  gap: 0.25rem;
+}
+.steps button {
+  position: relative;
+  display: block;
+  width: 1.75rem;
+  height: 2rem;
+  cursor: pointer;
+}
+.steps button::before,
+.steps button::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(50% - 1px);
+  height: 2px;
+}
+.steps button::before {
+  background: color-mix(in oklab, var(--color-fg) 18%, transparent);
+}
+.steps button::after {
+  background: var(--color-fg);
+  transform-origin: left;
+  transform: scaleX(0);
+}
+.steps button[data-state="past"]::after {
+  transform: scaleX(1);
+}
+.steps button[data-state="now"]::after {
+  transform: scaleX(var(--p, 0));
+}
+.steps button:hover::before {
+  background: color-mix(in oklab, var(--color-fg) 40%, transparent);
+}
+.caption {
+  display: flex;
+  gap: 0.75rem;
+  min-width: 0;
+  color: var(--color-fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.caption span {
+  flex: none;
+  color: var(--color-dim);
+}
+/* The key, low on the right, over the bar. */
+.legend {
+  position: absolute;
+  z-index: 3;
+  right: 1.75rem;
+  bottom: 4.5rem;
+  display: grid;
+  gap: 0.55rem;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-mute);
+}
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.legend i {
+  display: block;
+  flex: none;
+}
+.legend i[data-shape="ring"] {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--color-fg);
+}
+.legend i[data-shape="square"] {
+  width: 0.4rem;
+  height: 0.4rem;
+  background: var(--color-fg);
+}
+.legend i[data-shape="arc"],
+.legend i[data-shape="dots"] {
+  width: 1rem;
+  height: 0.4rem;
+  border-top: 1px solid var(--color-fg);
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  translate: 0 0.15rem;
+}
+.legend i[data-shape="dots"] {
+  border-top-style: dashed;
+}
+
+/* ---- Narrow: the network on top, the words beneath ---------------------------- */
+
+@media (max-width: 63.99rem) {
+  .screen {
+    height: auto;
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    background: radial-gradient(
+      110% 40% at 50% 30%,
+      #0e0e0d 0%,
+      var(--color-bg) 75%
+    );
+  }
+  .screen::after {
+    display: none;
+  }
+  .stage {
+    position: relative;
+    inset: auto;
+    height: 66svh;
+    min-height: 28rem;
+    flex: none;
+  }
+  .rider > span {
+    left: -1.6rem;
+    width: 3.2rem;
+    height: 2.4rem;
+  }
+  .bar {
+    order: 2;
+    position: relative;
+    left: auto;
+    right: auto;
+    height: auto;
+    padding: 0 1rem;
+    flex-wrap: wrap;
+    row-gap: 0.4rem;
+  }
+  .caption {
+    flex-basis: 100%;
+    white-space: normal;
+  }
+  .legend {
+    order: 3;
+    position: relative;
+    right: auto;
+    bottom: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    padding: 0.9rem 1rem 0;
+  }
+  .words {
+    order: 4;
+    position: relative;
+    left: auto;
+    bottom: auto;
+    width: auto;
+    padding: 2rem 1rem 3rem;
+  }
+  .words h1 {
+    font-size: 2.25rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pin > span {
+    transition: none;
+  }
+}
